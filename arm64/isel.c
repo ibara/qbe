@@ -222,7 +222,7 @@ seljmp(Blk *b, Fn *fn)
 void
 arm64_isel(Fn *fn)
 {
-	Blk *b, **sb;
+	Blk *b, **ps;
 	Ins *i;
 	Phi *p;
 	uint n, al;
@@ -248,8 +248,8 @@ arm64_isel(Fn *fn)
 
 	for (b=fn->start; b; b=b->link) {
 		curi = &insb[NIns];
-		for (sb=(Blk*[3]){b->s1, b->s2, 0}; *sb; sb++)
-			for (p=(*sb)->phi; p; p=p->link) {
+		for (ps=b->s; *ps; ps++)
+			for (p=(*ps)->phi; p; p=p->link) {
 				for (n=0; p->blk[n] != b; n++)
 					assert(n+1 < p->narg);
 				fixarg(&p->arg[n], p->cls, 1, fn);

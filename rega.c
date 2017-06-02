@@ -474,7 +474,7 @@ void
 rega(Fn *fn)
 {
 	int j, t, r, x, rl[Tmp0];
-	Blk *b, *b1, *s, ***ps, *blist, **blk, **bp;
+	Blk *b, *b1, *s, **ps, *blist, **blk, **bp;
 	RMap *end, *beg, cur, old, *m;
 	Ins *i;
 	Phi *p;
@@ -626,8 +626,7 @@ rega(Fn *fn)
 	/* 4. emit remaining copies in new blocks */
 	blist = 0;
 	for (b=fn->start;; b=b->link) {
-		ps = (Blk**[3]){&b->s1, &b->s2, (Blk*[1]){0}};
-		for (; (s=**ps); ps++) {
+		for (ps=b->s; (s=*ps); ps++) {
 			npm = 0;
 			for (p=s->phi; p; p=p->link) {
 				dst = p->to;
@@ -665,8 +664,8 @@ rega(Fn *fn)
 			stblk += 1;
 			idup(&b1->ins, curi, b1->nins);
 			b1->jmp.type = Jjmp;
-			b1->s1 = s;
-			**ps = b1;
+			b1->s[0] = s;
+			*ps = b1;
 		}
 		if (!b->link) {
 			b->link = blist;

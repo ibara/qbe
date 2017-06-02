@@ -540,7 +540,7 @@ parseline(PState ps)
 		if (curb && curb->jmp.type == Jxxx) {
 			closeblk();
 			curb->jmp.type = Jjmp;
-			curb->s1 = b;
+			curb->s[0] = b;
 		}
 		if (b->jmp.type != Jxxx)
 			err("multiple definitions of block @%s", b->name);
@@ -576,13 +576,13 @@ parseline(PState ps)
 		expect(Tcomma);
 	Jump:
 		expect(Tlbl);
-		curb->s1 = findblk(tokval.str);
+		curb->s[0] = findblk(tokval.str);
 		if (curb->jmp.type != Jjmp) {
 			expect(Tcomma);
 			expect(Tlbl);
-			curb->s2 = findblk(tokval.str);
+			curb->s[1] = findblk(tokval.str);
 		}
-		if (curb->s1 == curf->start || curb->s2 == curf->start)
+		if (curb->s[0] == curf->start || curb->s[1] == curf->start)
 			err("invalid jump to the start node");
 	Close:
 		expect(Tnl);
@@ -754,10 +754,10 @@ typecheck(Fn *fn)
 		JErr:
 			err("invalid type for jump argument %%%s in block @%s",
 				fn->tmp[r.val].name, b->name);
-		if (b->s1 && b->s1->jmp.type == Jxxx)
-			err("block @%s is used undefined", b->s1->name);
-		if (b->s2 && b->s2->jmp.type == Jxxx)
-			err("block @%s is used undefined", b->s2->name);
+		if (b->s[0] && b->s[0]->jmp.type == Jxxx)
+			err("block @%s is used undefined", b->s[0]->name);
+		if (b->s[1] && b->s[1]->jmp.type == Jxxx)
+			err("block @%s is used undefined", b->s[1]->name);
 	}
 }
 
@@ -1228,8 +1228,8 @@ printfn(Fn *fn, FILE *f)
 			fprintf(f, "\n");
 			break;
 		case Jjmp:
-			if (b->s1 != b->link)
-				fprintf(f, "\tjmp @%s\n", b->s1->name);
+			if (b->s[0] != b->link)
+				fprintf(f, "\tjmp @%s\n", b->s[0]->name);
 			break;
 		default:
 			fprintf(f, "\t%s ", jtoa[b->jmp.type]);
@@ -1237,7 +1237,7 @@ printfn(Fn *fn, FILE *f)
 				printref(b->jmp.arg, fn, f);
 				fprintf(f, ", ");
 			}
-			fprintf(f, "@%s, @%s\n", b->s1->name, b->s2->name);
+			fprintf(f, "@%s, @%s\n", b->s[0]->name, b->s[1]->name);
 			break;
 		}
 	}

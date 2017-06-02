@@ -20,7 +20,7 @@ edgedel(Blk *bs, Blk **pbd)
 	int mult;
 
 	bd = *pbd;
-	mult = 1 + (bs->s1 == bs->s2);
+	mult = 1 + (bs->s[0] == bs->s[1]);
 	*pbd = 0;
 	if (!bd || mult > 1)
 		return;
@@ -63,16 +63,16 @@ fillpreds(Fn *f)
 		b->pred = 0;
 	}
 	for (b=f->start; b; b=b->link) {
-		if (b->s1)
-			b->s1->npred++;
-		if (b->s2 && b->s2 != b->s1)
-			b->s2->npred++;
+		if (b->s[0])
+			b->s[0]->npred++;
+		if (b->s[1] && b->s[1] != b->s[0])
+			b->s[1]->npred++;
 	}
 	for (b=f->start; b; b=b->link) {
-		if (b->s1)
-			addpred(b, b->s1);
-		if (b->s2 && b->s2 != b->s1)
-			addpred(b, b->s2);
+		if (b->s[0])
+			addpred(b, b->s[0]);
+		if (b->s[1] && b->s[1] != b->s[0])
+			addpred(b, b->s[1]);
 	}
 }
 
@@ -84,11 +84,11 @@ rporec(Blk *b, uint x)
 	if (!b || b->id != -1u)
 		return x;
 	b->id = 1;
-	s1 = b->s1;
-	s2 = b->s2;
+	s1 = b->s[0];
+	s2 = b->s[1];
 	if (s1 && s2 && s1->loop > s2->loop) {
-		s1 = b->s2;
-		s2 = b->s1;
+		s1 = b->s[1];
+		s2 = b->s[0];
 	}
 	x = rporec(s1, x);
 	x = rporec(s2, x);
@@ -111,8 +111,8 @@ fillrpo(Fn *f)
 	f->rpo = alloc(f->nblk * sizeof f->rpo[0]);
 	for (p=&f->start; (b=*p);) {
 		if (b->id == -1u) {
-			edgedel(b, &b->s1);
-			edgedel(b, &b->s2);
+			edgedel(b, &b->s[0]);
+			edgedel(b, &b->s[1]);
 			*p = b->link;
 		} else {
 			b->id -= n;
@@ -224,12 +224,12 @@ fillfron(Fn *fn)
 	for (b=fn->start; b; b=b->link)
 		b->nfron = 0;
 	for (b=fn->start; b; b=b->link) {
-		if (b->s1)
-			for (a=b; !sdom(a, b->s1); a=a->idom)
-				addfron(a, b->s1);
-		if (b->s2)
-			for (a=b; !sdom(a, b->s2); a=a->idom)
-				addfron(a, b->s2);
+		if (b->s[0])
+			for (a=b; !sdom(a, b->s[0]); a=a->idom)
+				addfron(a, b->s[0]);
+		if (b->s[1])
+			for (a=b; !sdom(a, b->s[1]); a=a->idom)
+				addfron(a, b->s[1]);
 	}
 }
 
@@ -305,21 +305,21 @@ simpljmp(Fn *fn)
 		assert(!b->phi);
 		if (b->nins == 0)
 		if (b->jmp.type == Jjmp) {
-			uffind(&b->s1, uf);
-			if (b->s1 != b)
-				uf[b->id] = b->s1;
+			uffind(&b->s[0], uf);
+			if (b->s[0] != b)
+				uf[b->id] = b->s[0];
 		}
 	}
 	for (b=fn->start; b; b=b->link) {
-		if (b->s1)
-			uffind(&b->s1, uf);
-		if (b->s2)
-			uffind(&b->s2, uf);
+		if (b->s[0])
+			uffind(&b->s[0], uf);
+		if (b->s[1])
+			uffind(&b->s[1], uf);
 		c = b->jmp.type - Jjf;
 		if (0 <= c && c <= NCmp)
-		if (b->s1 == b->s2) {
+		if (b->s[0] == b->s[1]) {
 			b->jmp.type = Jjmp;
-			b->s2 = 0;
+			b->s[1] = 0;
 		}
 	}
 	free(uf);

@@ -567,23 +567,23 @@ amd64_emitfn(Fn *fn, FILE *f)
 			break;
 		case Jjmp:
 		Jmp:
-			if (b->s1 != b->link)
+			if (b->s[0] != b->link)
 				fprintf(f, "\tjmp %sbb%d\n",
-					gasloc, id0+b->s1->id);
+					gasloc, id0+b->s[0]->id);
 			else
 				lbl = 0;
 			break;
 		default:
 			c = b->jmp.type - Jjf;
 			if (0 <= c && c <= NCmp) {
-				if (b->link == b->s2) {
-					s = b->s1;
-					b->s1 = b->s2;
-					b->s2 = s;
+				if (b->link == b->s[1]) {
+					s = b->s[0];
+					b->s[0] = b->s[1];
+					b->s[1] = s;
 				} else
 					c = cmpneg(c);
 				fprintf(f, "\tj%s %sbb%d\n", ctoa[c],
-					gasloc, id0+b->s2->id);
+					gasloc, id0+b->s[1]->id);
 				goto Jmp;
 			}
 			die("unhandled jump %d", b->jmp.type);

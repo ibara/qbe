@@ -212,17 +212,6 @@ struct Phi {
 };
 
 struct Blk {
-	Phi *phi;
-	Ins *ins;
-	uint nins;
-	struct {
-		short type;
-		Ref arg;
-	} jmp;
-	Blk *s1;
-	Blk *s2;
-	Blk *link;
-
 	uint id;
 	uint visit;
 
@@ -237,6 +226,16 @@ struct Blk {
 	int nlive[2];
 	int loop;
 	char name[NString];
+
+	Phi *phi;
+	Ins *ins;
+	uint nins;
+	struct {
+		short type;
+		Ref arg;
+	} jmp;
+	Blk *link;
+	Blk *s[3];
 };
 
 struct Use {

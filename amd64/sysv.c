@@ -552,12 +552,12 @@ selvaarg(Fn *fn, Blk *b, Ins *i)
 	emit(Oload, i->cls, i->to, loc, R);
 	b0 = split(fn, b);
 	b0->jmp = b->jmp;
-	b0->s1 = b->s1;
-	b0->s2 = b->s2;
-	if (b->s1)
-		chpred(b->s1, b, b0);
-	if (b->s2 && b->s2 != b->s1)
-		chpred(b->s2, b, b0);
+	b0->s[0] = b->s[0];
+	b0->s[1] = b->s[1];
+	if (b->s[0])
+		chpred(b->s[0], b, b0);
+	if (b->s[1] && b->s[1] != b->s[0])
+		chpred(b->s[1], b, b0);
 
 	lreg = newtmp("abi", Kl, fn);
 	nr = newtmp("abi", Kl, fn);
@@ -573,7 +573,7 @@ selvaarg(Fn *fn, Blk *b, Ins *i)
 	emit(Oadd, Kl, r0, ap, c16);
 	breg = split(fn, b);
 	breg->jmp.type = Jjmp;
-	breg->s1 = b0;
+	breg->s[0] = b0;
 
 	lstk = newtmp("abi", Kl, fn);
 	r0 = newtmp("abi", Kl, fn);
@@ -584,7 +584,7 @@ selvaarg(Fn *fn, Blk *b, Ins *i)
 	emit(Oadd, Kl, r0, ap, c8);
 	bstk = split(fn, b);
 	bstk->jmp.type = Jjmp;
-	bstk->s1 = b0;
+	bstk->s[0] = b0;
 
 	b0->phi = alloc(sizeof *b0->phi);
 	*b0->phi = (Phi){
@@ -597,8 +597,8 @@ selvaarg(Fn *fn, Blk *b, Ins *i)
 	r1 = newtmp("abi", Kw, fn);
 	b->jmp.type = Jjnz;
 	b->jmp.arg = r1;
-	b->s1 = breg;
-	b->s2 = bstk;
+	b->s[0] = breg;
+	b->s[1] = bstk;
 	c = getcon(isint ? 48 : 176, fn);
 	emit(Ocmpw+Ciult, Kw, r1, nr, c);
 	emit(Oloadsw, Kl, nr, r0, R);

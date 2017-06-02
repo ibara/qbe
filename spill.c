@@ -331,8 +331,8 @@ spill(Fn *fn)
 		/* 1. find temporaries in registers at
 		 * the end of the block (put them in v) */
 		curi = 0;
-		s1 = b->s1;
-		s2 = b->s2;
+		s1 = b->s[0];
+		s2 = b->s[1];
 		hd = 0;
 		if (s1 && s1->id <= b->id)
 			hd = s1;

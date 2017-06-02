@@ -360,10 +360,10 @@ seljmp(Blk *b, Fn *fn)
 	t = &fn->tmp[r.val];
 	b->jmp.arg = R;
 	assert(!req(r, R) && rtype(r) != RCon);
-	if (b->s1 == b->s2) {
+	if (b->s[0] == b->s[1]) { /* !!! not ok with edge phis !!! */
 		chuse(r, -1, fn);
 		b->jmp.type = Jjmp;
-		b->s2 = 0;
+		b->s[1] = 0;
 		return;
 	}
 	fi = flagi(b->ins, &b->ins[b->nins]);
@@ -562,7 +562,7 @@ amatch(Addr *a, Ref r, ANum *ai, Fn *fn, int top)
 void
 amd64_isel(Fn *fn)
 {
-	Blk *b, **sb;
+	Blk *b, **ps;
 	Ins *i;
 	Phi *p;
 	uint a;
@@ -593,8 +593,8 @@ amd64_isel(Fn *fn)
 	ainfo = emalloc(n * sizeof ainfo[0]);
 	for (b=fn->start; b; b=b->link) {
 		curi = &insb[NIns];
-		for (sb=(Blk*[3]){b->s1, b->s2, 0}; *sb; sb++)
-			for (p=(*sb)->phi; p; p=p->link) {
+		for (ps=b->s; *ps; ps++)
+			for (p=(*ps)->phi; p; p=p->link) {
 				for (a=0; p->blk[a] != b; a++)
 					assert(a+1 < p->narg);
 				fixarg(&p->arg[a], p->cls, -1, fn);

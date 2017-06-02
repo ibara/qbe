@@ -432,8 +432,8 @@ arm64_emitfn(Fn *fn, FILE *out)
 			break;
 		case Jjmp:
 		Jmp:
-			if (b->s1 != b->link)
-				fprintf(e->f, "\tb\t.L%d\n", id0+b->s1->id);
+			if (b->s[0] != b->link)
+				fprintf(e->f, "\tb\t.L%d\n", id0+b->s[0]->id);
 			else
 				lbl = 0;
 			break;
@@ -441,13 +441,13 @@ arm64_emitfn(Fn *fn, FILE *out)
 			c = b->jmp.type - Jjf;
 			if (c < 0 || c > NCmp)
 				die("unhandled jump %d", b->jmp.type);
-			if (b->link == b->s2) {
-				s = b->s1;
-				b->s1 = b->s2;
-				b->s2 = s;
+			if (b->link == b->s[1]) {
+				s = b->s[0];
+				b->s[0] = b->s[1];
+				b->s[1] = s;
 			} else
 				c = cmpneg(c);
-			fprintf(e->f, "\tb%s\t.L%d\n", ctoa[c], id0+b->s2->id);
+			fprintf(e->f, "\tb%s\t.L%d\n", ctoa[c], id0+b->s[1]->id);
 			goto Jmp;
 		}
 	}

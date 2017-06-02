@@ -200,8 +200,8 @@ fold(Fn *fn)
 	for (n=0; n<fn->nblk; n++) {
 		b = fn->rpo[n];
 		b->visit = 0;
-		initedge(&edge[n][0], b->s1);
-		initedge(&edge[n][1], b->s2);
+		initedge(&edge[n][0], b->s[0]);
+		initedge(&edge[n][1], b->s[1]);
 	}
 	initedge(&start, fn->start);
 	flowrk = &start;
@@ -275,8 +275,8 @@ fold(Fn *fn)
 			d = 1;
 			if (debug['F'])
 				fprintf(stderr, "%s ", b->name);
-			edgedel(b, &b->s1);
-			edgedel(b, &b->s2);
+			edgedel(b, &b->s[0]);
+			edgedel(b, &b->s[1]);
 			*pb = b->link;
 			continue;
 		}
@@ -298,11 +298,11 @@ fold(Fn *fn)
 		renref(&b->jmp.arg);
 		if (b->jmp.type == Jjnz && rtype(b->jmp.arg) == RCon) {
 				if (czero(&fn->con[b->jmp.arg.val], 0)) {
-					edgedel(b, &b->s1);
-					b->s1 = b->s2;
-					b->s2 = 0;
+					edgedel(b, &b->s[0]);
+					b->s[0] = b->s[1];
+					b->s[1] = 0;
 				} else
-					edgedel(b, &b->s2);
+					edgedel(b, &b->s[1]);
 				b->jmp.type = Jjmp;
 				b->jmp.arg = R;
 		}
