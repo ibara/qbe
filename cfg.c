@@ -42,37 +42,43 @@ edgedel(Blk *bs, Blk **pbd)
 	}
 }
 
-static void
-addpred(Blk *bp, Blk *bc)
-{
-	if (!bc->pred) {
-		bc->pred = alloc(bc->npred * sizeof bc->pred[0]);
-		bc->visit = 0;
-	}
-	bc->pred[bc->visit++] = bp;
-}
-
 /* fill predecessors information in blocks */
 void
 fillpreds(Fn *f)
 {
-	Blk *b;
+	Blk *b, *s, **ps;
 
 	for (b=f->start; b; b=b->link) {
 		b->npred = 0;
 		b->pred = 0;
+		b->nsrc = 0;
+		b->src = 0;
 	}
 	for (b=f->start; b; b=b->link) {
-		if (b->s[0])
+		if (b->s[0]) {
 			b->s[0]->npred++;
-		if (b->s[1] && b->s[1] != b->s[0])
-			b->s[1]->npred++;
+			b->s[0]->nsrc++;
+		}
+		if (b->s[1]) {
+			if (b->s[1] != b->s[0])
+				b->s[1]->npred++;
+			b->s[1]->nsrc++;
+		}
 	}
 	for (b=f->start; b; b=b->link) {
-		if (b->s[0])
-			addpred(b, b->s[0]);
-		if (b->s[1] && b->s[1] != b->s[0])
-			addpred(b, b->s[1]);
+		for (ps=b->s; (s=*ps); ps++) {
+			if (!s->pred) {
+				s->pred = alloc(s->npred * sizeof s->pred[0]);
+				s->npred = 0;
+			}
+			if (!s->src) {
+				s->src = alloc(s->nsrc * sizeof s->src[0]);
+				s->nsrc = 0;
+			}
+			if (!s->npred || s->pred[s->npred-1] != b)
+				s->pred[s->npred++] = b;
+			s->src[s->nsrc++] = (Src){b, ps - b->s};
+		}
 	}
 }
 

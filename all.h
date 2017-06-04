@@ -19,6 +19,7 @@ typedef struct Op Op;
 typedef struct Ins Ins;
 typedef struct Phi Phi;
 typedef struct Blk Blk;
+typedef struct Src Src;
 typedef struct Use Use;
 typedef struct Alias Alias;
 typedef struct Tmp Tmp;
@@ -202,6 +203,11 @@ struct Ins {
 	uint cls:2;
 };
 
+struct Src {
+	Blk *b;
+	uint n;
+};
+
 struct Phi {
 	Ref to;
 	Ref arg[NPred];
@@ -209,6 +215,7 @@ struct Phi {
 	uint narg;
 	int cls;
 	Phi *link;
+	Src src[];
 };
 
 struct Blk {
@@ -220,6 +227,8 @@ struct Blk {
 	Blk **fron;
 	uint nfron;
 
+	Src *src;
+	uint nsrc;
 	Blk **pred;
 	uint npred;
 	BSet in[1], out[1], gen[1];
