@@ -506,15 +506,31 @@ closeblk()
 	curi = insb;
 }
 
+static int
+scmp(const void *a, const void *b)
+{
+	Src *sa, *sb;
+
+	sa = (Src *)a;
+	sb = (Src *)b;
+	if (sa->b->id != sb->b->id)
+		return sa->b->id < sb->b->id ? -1 : 1;
+	if (sa->n != sb->n)
+		return sa->n < sb->n ? -1 : 1;
+	return 0;
+}
+
 static PState
 parseline(PState ps)
 {
-	Ref arg[NPred] = {R};
-	Blk *blk[NPred];
+	struct {
+		Src src;
+		Ref ref;
+	} arg[NPred] = {{{0}, R}}, *a;
 	Phi *phi;
 	Ref r;
 	Blk *b;
-	int t, op, i, k, ty;
+	int t, op, i, na, k, ty;
 
 	t = nextnl();
 	if (ps == PLbl && t != Tlbl && t != Trbrace)
@@ -600,7 +616,7 @@ DoOp:
 		op = -1;
 	}
 	if (op == Tcall) {
-		arg[0] = parseref();
+		arg[0].ref = parseref();
 		if (parserefl(1))
 			op = Ovacall;
 		else
@@ -608,9 +624,9 @@ DoOp:
 		expect(Tnl);
 		if (k == 4) {
 			k = Kl;
-			arg[1] = TYPE(ty);
+			arg[1].ref = TYPE(ty);
 		} else
-			arg[1] = R;
+			arg[1].ref = R;
 		goto Ins;
 	}
 	if (op >= Tloadw && op <= Tloadd)
@@ -621,19 +637,25 @@ DoOp:
 		err("size class must be w, l, s, or d");
 	if (op >= NPubOp)
 		err("invalid instruction");
-	i = 0;
+	a = arg;
 	if (peek() != Tnl)
 		for (;;) {
-			if (i == NPred)
+			if (a-arg == NPred)
 				err("too many arguments");
 			if (op == -1) {
 				expect(Tlbl);
-				blk[i] = findblk(tokval.str);
+				a->src.b = findblk(tokval.str);
+				if (peek() == Tplus) {
+					next();
+					expect(Tint);
+					a->src.n = tokval.num;
+				} else
+					a->src.n = -1u;
 			}
-			arg[i] = parseref();
-			if (req(arg[i], R))
+			a->ref = parseref();
+			if (req(a->ref, R))
 				err("invalid instruction argument");
-			i++;
+			a++;
 			t = peek();
 			if (t == Tnl)
 				break;
@@ -649,17 +671,22 @@ Ins:
 		curi->op = op;
 		curi->cls = k;
 		curi->to = r;
-		curi->arg[0] = arg[0];
-		curi->arg[1] = arg[1];
+		curi->arg[0] = arg[0].ref;
+		curi->arg[1] = arg[1].ref;
 		curi++;
 		return PIns;
 	} else {
-		phi = alloc(sizeof *phi);
+		na = a - arg;
+		phi = alloc(sizeof *phi + na * sizeof(Src));
 		phi->to = r;
 		phi->cls = k;
-		memcpy(phi->arg, arg, i * sizeof arg[0]);
-		memcpy(phi->blk, blk, i * sizeof blk[0]);
-		phi->narg = i;
+		qsort(arg, na, sizeof arg[0], scmp);
+		for (a=arg, i=0; i<na; a++, i++) {
+			phi->arg[i] = a->ref;
+			phi->blk[i] = a->src.b;
+			phi->src[i] = a->src;
+		}
+		phi->narg = na;
 		*plink = phi;
 		plink = &phi->link;
 		return PPhi;
@@ -683,11 +710,8 @@ typecheck(Fn *fn)
 	int k;
 	Tmp *t;
 	Ref r;
-	BSet pb[1], ppb[1];
 
 	fillpreds(fn);
-	bsinit(pb, fn->nblk);
-	bsinit(ppb, fn->nblk);
 	for (b=fn->start; b; b=b->link) {
 		for (p=b->phi; p; p=p->link)
 			fn->tmp[p->to.val].cls = p->cls;
@@ -700,24 +724,22 @@ typecheck(Fn *fn)
 			}
 	}
 	for (b=fn->start; b; b=b->link) {
-		bszero(pb);
-		for (n=0; n<b->npred; n++)
-			bsset(pb, b->pred[n]->id);
 		for (p=b->phi; p; p=p->link) {
-			bszero(ppb);
 			t = &fn->tmp[p->to.val];
-			for (n=0; n<p->narg; n++) {
-				k = t->cls;
-				if (bshas(ppb, p->blk[n]->id))
-					err("multiple entries for @%s in phi %%%s",
-						p->blk[n]->name, t->name);
+			k = t->cls;
+			if (p->narg != b->nsrc)
+			PhiErr:
+				err("invalid arguments for phi %%%s", t->name);
+			for (n=0; n<b->nsrc; n++) {
 				if (!usecheck(p->arg[n], k, fn))
 					err("invalid type for operand %%%s in phi %%%s",
 						fn->tmp[p->arg[n].val].name, t->name);
-				bsset(ppb, p->blk[n]->id);
+				if (p->src[n].b != b->src[n].b)
+					goto PhiErr;
+				if (p->src[n].n != -1u)
+				if (p->src[n].n != b->src[n].n)
+					goto PhiErr;
 			}
-			if (!bsequal(pb, ppb))
-				err("predecessors not matched in phi %%%s", t->name);
 		}
 		for (i=b->ins; i-b->ins < b->nins; i++)
 			for (n=0; n<2; n++) {
