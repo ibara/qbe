@@ -106,3 +106,60 @@ let test_peel =
  * have not seen this cursor combination yet); we can
  * also do the same with unary operations
  * *)
+
+let fold_pairs l ini f =
+  let rec go acc = function
+    | [] -> acc
+    | a :: l' -> 
+        List.fold_left
+          (fun acc b -> f (a, b) acc) 
+          (go acc l') l
+  in go ini l
+
+type state =
+  { id: int
+  ; seen: pattern
+  ; point: (cursor * pattern) list }
+
+let rec binops side {point; _} =
+  List.fold_left (fun res (c, _) ->
+    match c, side with
+    | Bnrl (o, _, r), `L -> (o, r) :: res
+    | Bnrr (o, l, _), `R -> (o, l) :: res
+    | _ -> res)
+    [] point
+
+let nextbnr s1 s2 =
+  let ops =
+    let pm w (_, p) = pattern_match p w in
+    let o1 = binops `L s1 |>
+             List.filter (pm s2.seen) |>
+             List.map fst
+    and o2 = binops `R s2 |>
+             List.filter (pm s1.seen) |>
+             List.map fst
+    in
+    (* intersect the two lists *)
+    List.filter (fun o ->
+      List.exists ((=) o) o1) o2
+  in
+  ops
+
+
+
+
+
+
+
+
+
+
+
+let ts =
+  let o = Kw, Oadd in
+  let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
+                  Atm (Con 42L)) in
+  { id = 0
+  ; seen = Atm Any
+  ; point = peel p
+  }
