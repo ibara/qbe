@@ -34,22 +34,6 @@ let rec pattern_match p w =
       | _ -> false
       end
 
-let test_pattern_match =
-  let pm = pattern_match
-  and nm = fun x y -> not (pattern_match x y)
-  and o = (Kw, Oadd) in
-  begin
-    assert (pm (Atm Any) (Atm (Con 42L)));
-    assert (pm (Atm Any) (Unr (o, Atm Any)));
-    assert (nm (Atm (Con 42L)) (Atm Any));
-    assert (pm (Unr (o, Atm Any))
-               (Unr (o, Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Any))
-               (Unr ((Kl, Oadd), Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Any))
-               (Bnr (o, Atm (Con 42L), Atm Any)));
-  end
-
 type cursor = (* a position inside a pattern *)
   | Bnrl of op * cursor * pattern
   | Bnrr of op * pattern * cursor
@@ -79,19 +63,6 @@ let peel p =
     then l
     else go l'
   in go [(Top, p)]
-
-let test_peel =
-  let o = Kw, Oadd in
-  let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
-                  Atm (Con 42L)) in
-  let l = peel p in
-  let () = assert (List.length l = 3) in
-  let atomic_p (_, p) =
-    match p with Atm _ -> true | _ -> false in
-  let () = assert (List.for_all atomic_p l) in
-  let l = List.map (fun (c, p) -> fold_cursor c p) l in
-  let () = assert (List.for_all ((=) p) l) in
-  ()
 
 (* we want to compute all the configurations we could
  * possibly be in when processing a block of instructions;
@@ -130,36 +101,17 @@ let rec binops side {point; _} =
     [] point
 
 let nextbnr s1 s2 =
+  let pm w (_, p) = pattern_match p w in
+  let o1 = binops `L s1 |>
+           List.filter (pm s2.seen) |>
+           List.map fst
+  and o2 = binops `R s2 |>
+           List.filter (pm s1.seen) |>
+           List.map fst
+  in
   let ops =
-    let pm w (_, p) = pattern_match p w in
-    let o1 = binops `L s1 |>
-             List.filter (pm s2.seen) |>
-             List.map fst
-    and o2 = binops `R s2 |>
-             List.filter (pm s1.seen) |>
-             List.map fst
-    in
     (* intersect the two lists *)
     List.filter (fun o ->
       List.exists ((=) o) o1) o2
   in
   ops
-
-
-
-
-
-
-
-
-
-
-
-let ts =
-  let o = Kw, Oadd in
-  let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
-                  Atm (Con 42L)) in
-  { id = 0
-  ; seen = Atm Any
-  ; point = peel p
-  }
