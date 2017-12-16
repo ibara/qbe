@@ -41,7 +41,7 @@ let test_fold_pairs =
 let ts =
   let o = Kw, Oadd in
   let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
-                  Atm Any) in
+                  Atm (Con 0L)) in
   { id = 0
   ; seen = Atm Any
   ; point =

@@ -100,6 +100,19 @@ let rec binops side {point; _} =
     | _ -> res)
     [] point
 
+let group_by_fst l =
+  List.sort (fun (a, _) (b, _) ->
+    compare a b) l |>
+  List.fold_left (fun (oo, l, res) (o', c) ->
+      match oo with
+      | None -> (Some o', [c], [])
+      | Some o when o = o' -> (oo, c :: l, res)
+      | Some o -> (Some o', [c], (o, l) :: res))
+    (None, [], []) |>
+  (function
+    | (None, _, _) -> []
+    | (Some o, l, res) -> (o, l) :: res)
+
 let nextbnr s1 s2 =
   let pm w (_, p) = pattern_match p w in
   let o1 = binops `L s1 |>
@@ -109,23 +122,8 @@ let nextbnr s1 s2 =
            List.filter (pm s1.seen) |>
            List.map fst
   in
-  o1 @ o2 |>
-  (* group by operation... *)
-  List.sort (fun (a, _) (b, _) ->
-    compare a b) |>
-  List.fold_left (fun (oo, l, res) (o', c) ->
-      match oo with
-      | None -> (Some o', [c], [])
-      | Some o when o = o' -> (oo, c :: l, res)
-      | Some o -> (Some o', [c], (o, l) :: res))
-    (None, [], []) |>
-  (fun (oo, l, res) ->
-    match oo with
-    | None -> []
-    | Some o -> (o, l) :: res) |>
-  (* create states *)
   List.map (fun (o, l) ->
     { id = 0
     ; seen = Bnr (o, s1.seen, s2.seen)
     ; point = List.sort_uniq compare l
-    })
+    }) (group_by_fst (o1 @ o2))
