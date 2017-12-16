@@ -29,12 +29,23 @@ let test_peel =
   let () = assert (List.for_all ((=) p) l) in
   ()
 
+let test_fold_pairs =
+  let l = [1; 2; 3; 4; 5] in
+  let p = fold_pairs l l [] (fun a b -> a :: b) in
+  let () = assert (List.length p = 25) in
+  let p = List.sort_uniq compare p in
+  let () = assert (List.length p = 25) in
+  ()
+
 (* test state *)
 let ts =
   let o = Kw, Oadd in
   let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
-                  Atm (Con 42L)) in
+                  Atm Any) in
   { id = 0
   ; seen = Atm Any
-  ; point = peel p
+  ; point =
+    List.map fst
+      (List.filter (fun (_, p) -> p = Atm Any)
+        (peel p))
   }

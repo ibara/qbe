@@ -78,25 +78,25 @@ let peel p =
  * also do the same with unary operations
  * *)
 
-let fold_pairs l ini f =
+let fold_pairs l1 l2 ini f =
   let rec go acc = function
     | [] -> acc
-    | a :: l' -> 
-        List.fold_left
+    | a :: l1' -> 
+        go (List.fold_left
           (fun acc b -> f (a, b) acc) 
-          (go acc l') l
-  in go ini l
+          acc l2) l1'
+  in go ini l1
 
 type state =
   { id: int
   ; seen: pattern
-  ; point: (cursor * pattern) list }
+  ; point: cursor list }
 
 let rec binops side {point; _} =
-  List.fold_left (fun res (c, _) ->
+  List.fold_left (fun res c ->
     match c, side with
-    | Bnrl (o, _, r), `L -> (o, r) :: res
-    | Bnrr (o, l, _), `R -> (o, l) :: res
+    | Bnrl (o, c, r), `L -> ((o, c), r) :: res
+    | Bnrr (o, l, c), `R -> ((o, c), l) :: res
     | _ -> res)
     [] point
 
@@ -109,9 +109,23 @@ let nextbnr s1 s2 =
            List.filter (pm s1.seen) |>
            List.map fst
   in
-  let ops =
-    (* intersect the two lists *)
-    List.filter (fun o ->
-      List.exists ((=) o) o1) o2
-  in
-  ops
+  o1 @ o2 |>
+  (* group by operation... *)
+  List.sort (fun (a, _) (b, _) ->
+    compare a b) |>
+  List.fold_left (fun (oo, l, res) (o', c) ->
+      match oo with
+      | None -> (Some o', [c], [])
+      | Some o when o = o' -> (oo, c :: l, res)
+      | Some o -> (Some o', [c], (o, l) :: res))
+    (None, [], []) |>
+  (fun (oo, l, res) ->
+    match oo with
+    | None -> []
+    | Some o -> (o, l) :: res) |>
+  (* create states *)
+  List.map (fun (o, l) ->
+    { id = 0
+    ; seen = Bnr (o, s1.seen, s2.seen)
+    ; point = List.sort_uniq compare l
+    })
