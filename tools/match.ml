@@ -94,9 +94,9 @@ type state =
 
 let rec binops side {point; _} =
   List.fold_left (fun res c ->
-    match c, side with
-    | Bnrl (o, c, r), `L -> ((o, c), r) :: res
-    | Bnrr (o, l, c), `R -> ((o, c), l) :: res
+      match c, side with
+      | Bnrl (o, c, r), `L -> ((o, c), r) :: res
+      | Bnrr (o, l, c), `R -> ((o, c), l) :: res
     | _ -> res)
     [] point
 
@@ -127,3 +127,54 @@ let nextbnr s1 s2 =
     ; seen = Bnr (o, s1.seen, s2.seen)
     ; point = List.sort_uniq compare l
     }) (group_by_fst (o1 @ o2))
+
+let nextunr s =
+  List.fold_left (fun res -> function
+      | Unra (o, c) -> (o, c) :: res
+      | _ -> res)
+    [] s.point |>
+  group_by_fst |>
+  List.map (fun (o, l) ->
+    { id = 0
+    ; seen = Unr (o, s.seen)
+    ; point = List.sort_uniq compare l
+    })
+
+module StateSet : sig
+  type set
+  val create: unit -> set
+  val add: set -> state ->
+           [> `Added | `Found ] * state
+  val iter: set -> (state -> unit) -> unit
+  val elems: set -> state list
+end = struct
+  include Hashtbl.Make(struct
+    type t = state
+    let equal s1 s2 = s1.point = s2.point
+    let hash s = Hashtbl.hash s.point
+  end)
+  type set =
+    { h: int t
+    ; mutable next_id: int }
+  let create () =
+    { h = create 500; next_id = 1 }
+  let add set s =
+    assert (s.point = (* remove me later *)
+      List.sort_uniq compare s.point);
+    try
+      let id = find set.h s in
+      `Found, {s with id}
+    with Not_found -> begin
+      let id = set.next_id in
+      set.next_id <- id + 1;
+      add set.h s id;
+      `Added, {s with id}
+    end
+  let iter set f =
+    let f s id = f {s with id} in
+    iter f set.h
+  let elems set =
+    let res = ref [] in
+    iter set (fun s -> res := s :: !res);
+    !res
+end
