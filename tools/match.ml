@@ -48,21 +48,21 @@ let rec fold_cursor c p =
   | Top -> p
 
 let peel p =
-  let once out (c, p) =
+  let once out (p, c) =
     match p with
-    | Atm _ -> (c, p) :: out
+    | Atm _ -> (p, c) :: out
     | Unr (o, pa) ->
-        (Unra (o, c), pa) :: out
+        (pa, Unra (o, c)) :: out
     | Bnr (o, pl, pr) ->
-        (Bnrl (o, c, pr), pl) ::
-        (Bnrr (o, pl, c), pr) :: out
+        (pl, Bnrl (o, c, pr)) ::
+        (pr, Bnrr (o, pl, c)) :: out
   in
   let rec go l =
     let l' = List.fold_left once [] l in
     if List.length l' = List.length l
     then l
     else go l'
-  in go [(Top, p)]
+  in go [(p, Top)]
 
 (* we want to compute all the configurations we could
  * possibly be in when processing a block of instructions;
@@ -86,6 +86,9 @@ let fold_pairs l1 l2 ini f =
           (fun acc b -> f (a, b) acc) 
           acc l2) l1'
   in go ini l1
+
+let iter_pairs l f =
+  fold_pairs l l () (fun x () -> f x)
 
 type state =
   { id: int
@@ -123,6 +126,7 @@ let nextbnr s1 s2 =
            List.map fst
   in
   List.map (fun (o, l) ->
+    o,
     { id = 0
     ; seen = Bnr (o, s1.seen, s2.seen)
     ; point = List.sort_uniq compare l
@@ -135,6 +139,7 @@ let nextunr s =
     [] s.point |>
   group_by_fst |>
   List.map (fun (o, l) ->
+    o,
     { id = 0
     ; seen = Unr (o, s.seen)
     ; point = List.sort_uniq compare l
@@ -178,3 +183,70 @@ end = struct
     iter set (fun s -> res := s :: !res);
     !res
 end
+
+type table_key =
+  | KU of op * state
+  | KB of op * state * state
+
+module StateMap = Map.Make(struct
+  type t = table_key
+  let compare ka kb =
+    match ka, kb with
+    | KU (_), KB (_) -> -1
+    | KB (_), KU (_) -> +1
+    | KU (o, s), KU (o', s') ->
+      compare (o, s.id) (o', s'.id)
+    | KB (o, sl, sr), KB (o', sl', sr') ->
+      compare (o, sl.id, sr.id)
+              (o', sl'.id, sr'.id)
+end)
+
+let generate_table pl =
+  let states = StateSet.create () in
+  let () = (* initialize states *)
+    List.fold_left
+      (fun ini p -> peel p @ ini)
+      [] pl |>
+    group_by_fst |>
+    List.iter (fun (seen, l) ->
+      let point = List.sort_uniq compare l in
+      let s = {id = 0; seen; point} in
+      let flag, _ = StateSet.add states s in
+      assert (flag = `Added)
+    )
+  in
+  let map = ref StateMap.empty in
+  let map_add k s' =
+    map := StateMap.add k s' !map
+  in
+  let flag = ref `Added in
+  let flagmerge = function
+    | `Added -> flag := `Added
+    | _ -> ()
+  in
+  while !flag = `Added do
+    flag := `Continue;
+    let statel = StateSet.elems states in
+    iter_pairs statel (fun (sl, sr) ->
+      nextbnr sl sr |>
+      List.iter (fun (o, s') ->
+        let flag', s' =
+          StateSet.add states s' in
+        flagmerge flag';
+        map_add (KB (o, sl, sr)) s';
+    ));
+    statel |>
+    List.iter (fun s ->
+      nextunr s |>
+      List.iter (fun (o, s') ->
+        let flag', s' =
+          StateSet.add states s' in
+        flagmerge flag';
+        map_add (KU (o, s)) s';
+    ));
+  done;
+  (StateSet.elems states, !map)
+    
+  
+
+

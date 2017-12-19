@@ -22,10 +22,10 @@ let test_peel =
                   Atm (Con 42L)) in
   let l = peel p in
   let () = assert (List.length l = 3) in
-  let atomic_p (_, p) =
+  let atomic_p (p, _) =
     match p with Atm _ -> true | _ -> false in
   let () = assert (List.for_all atomic_p l) in
-  let l = List.map (fun (c, p) -> fold_cursor c p) l in
+  let l = List.map (fun (p, c) -> fold_cursor c p) l in
   let () = assert (List.for_all ((=) p) l) in
   ()
 
@@ -37,15 +37,16 @@ let test_fold_pairs =
   let () = assert (List.length p = 25) in
   ()
 
-(* test state *)
-let ts =
+(* test pattern & state *)
+let tp =
   let o = Kw, Oadd in
-  let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
-                  Atm (Con 0L)) in
+  Bnr (o, Bnr (o, Atm Any, Atm Any),
+                  Atm (Con 0L))
+let ts =
   { id = 0
   ; seen = Atm Any
   ; point =
-    List.map fst
-      (List.filter (fun (_, p) -> p = Atm Any)
-        (peel p))
+    List.map snd
+      (List.filter (fun (p, _) -> p = Atm Any)
+        (peel tp))
   }
