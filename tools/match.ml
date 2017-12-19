@@ -64,20 +64,6 @@ let peel p =
     else go l'
   in go [(p, Top)]
 
-(* we want to compute all the configurations we could
- * possibly be in when processing a block of instructions;
- * to do so, we start with all the possible cursors for
- * the list of patterns we are given, this will be our
- * main "initial state"; each constant (used in the
- * patterns) also generates a state of its own
- *
- * to create new states we can take pairs of states, and
- * combine them with binary operations, we keep the
- * result if it is non-trivial (non-empty) and new (we
- * have not seen this cursor combination yet); we can
- * also do the same with unary operations
- * *)
-
 let fold_pairs l1 l2 ini f =
   let rec go acc = function
     | [] -> acc
@@ -116,7 +102,10 @@ let group_by_fst l =
     | (None, _, _) -> []
     | (Some o, l, res) -> (o, l) :: res)
 
-let nextbnr s1 s2 =
+let normalize (point: cursor list) =
+  List.sort_uniq compare point
+
+let nextbnr any s1 s2 =
   let pm w (_, p) = pattern_match p w in
   let o1 = binops `L s1 |>
            List.filter (pm s2.seen) |>
@@ -129,10 +118,10 @@ let nextbnr s1 s2 =
     o,
     { id = 0
     ; seen = Bnr (o, s1.seen, s2.seen)
-    ; point = List.sort_uniq compare l
+    ; point = normalize (l @ any)
     }) (group_by_fst (o1 @ o2))
 
-let nextunr s =
+let nextunr any s =
   List.fold_left (fun res -> function
       | Unra (o, c) -> (o, c) :: res
       | _ -> res)
@@ -142,7 +131,7 @@ let nextunr s =
     o,
     { id = 0
     ; seen = Unr (o, s.seen)
-    ; point = List.sort_uniq compare l
+    ; point = normalize (l @ any)
     })
 
 module StateSet : sig
@@ -164,8 +153,8 @@ end = struct
   let create () =
     { h = create 500; next_id = 1 }
   let add set s =
-    assert (s.point = (* remove me later *)
-      List.sort_uniq compare s.point);
+    (* delete the check later *)
+    assert (s.point = normalize s.point);
     try
       let id = find set.h s in
       `Found, {s with id}
@@ -203,18 +192,26 @@ end)
 
 let generate_table pl =
   let states = StateSet.create () in
-  let () = (* initialize states *)
+  (* initialize states *)
+  let ground =
     List.fold_left
       (fun ini p -> peel p @ ini)
       [] pl |>
-    group_by_fst |>
+    group_by_fst
+  in
+  let any =
+    try List.assoc (Atm Any) ground
+    with Not_found -> []
+  in
+  let () =
     List.iter (fun (seen, l) ->
-      let point = List.sort_uniq compare l in
+      let point = normalize (any @ l) in
       let s = {id = 0; seen; point} in
       let flag, _ = StateSet.add states s in
       assert (flag = `Added)
-    )
+    ) ground
   in
+  (* setup loop state *)
   let map = ref StateMap.empty in
   let map_add k s' =
     map := StateMap.add k s' !map
@@ -224,11 +221,12 @@ let generate_table pl =
     | `Added -> flag := `Added
     | _ -> ()
   in
+  (* iterate until fixpoint *)
   while !flag = `Added do
-    flag := `Continue;
+    flag := `Stop;
     let statel = StateSet.elems states in
     iter_pairs statel (fun (sl, sr) ->
-      nextbnr sl sr |>
+      nextbnr any sl sr |>
       List.iter (fun (o, s') ->
         let flag', s' =
           StateSet.add states s' in
@@ -237,7 +235,7 @@ let generate_table pl =
     ));
     statel |>
     List.iter (fun s ->
-      nextunr s |>
+      nextunr any s |>
       List.iter (fun (o, s') ->
         let flag', s' =
           StateSet.add states s' in
@@ -246,7 +244,3 @@ let generate_table pl =
     ));
   done;
   (StateSet.elems states, !map)
-    
-  
-
-

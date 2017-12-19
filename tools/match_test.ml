@@ -50,3 +50,32 @@ let ts =
       (List.filter (fun (p, _) -> p = Atm Any)
         (peel tp))
   }
+
+let print_sm =
+  let op_str (k, o) =
+    Printf.sprintf "%s%s"
+      (match o with
+       | Oadd -> "add"
+       | Osub -> "sub"
+       | Omul -> "mul")
+      (match k with
+       | Kw -> "w"
+       | Kl -> "l"
+       | Ks -> "s"
+       | Kd -> "d")
+  in
+  StateMap.iter (fun k s' ->
+    match k with
+    | KU (o, s) ->
+        Printf.printf
+          "(%s %d) -> %d\n"
+          (op_str o)
+          s.id s'.id
+    | KB (o, sl, sr) ->
+        Printf.printf
+          "(%s %d %d) -> %d\n"
+          (op_str o)
+          sl.id sr.id s'.id
+  )
+
+
