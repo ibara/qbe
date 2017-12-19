@@ -78,4 +78,22 @@ let print_sm =
           sl.id sr.id s'.id
   )
 
+let address_patterns =
+  let oa = Kl, Oadd in
+  let om = Kl, Omul in
+  (* o + b *)
+  [ Bnr (oa, Atm Any, Atm (Con 0L))
+  ; Bnr (oa, Atm (Con 0L), Atm Any)
 
+  (* b + s * i *)
+  ; Bnr (oa, Atm Any, Bnr (om, Atm (Con 0L), Atm Any))
+  ; Bnr (oa, Atm Any, Bnr (om, Atm Any, Atm (Con 0L)))
+  ; Bnr (oa, Bnr (om, Atm (Con 0L), Atm Any), Atm Any)
+  ; Bnr (oa, Bnr (om, Atm Any, Atm (Con 0L)), Atm Any)
+
+  (* o + s * i *)
+  ; Bnr (oa, Atm (Con 0L), Bnr (om, Atm (Con 0L), Atm Any))
+  ; Bnr (oa, Atm (Con 0L), Bnr (om, Atm Any, Atm (Con 0L)))
+  ; Bnr (oa, Bnr (om, Atm (Con 0L), Atm Any), Atm (Con 0L))
+  ; Bnr (oa, Bnr (om, Atm Any, Atm (Con 0L)), Atm (Con 0L))
+  ]
