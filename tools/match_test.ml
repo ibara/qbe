@@ -33,7 +33,7 @@ let test_fold_pairs =
   let l = [1; 2; 3; 4; 5] in
   let p = fold_pairs l l [] (fun a b -> a :: b) in
   let () = assert (List.length p = 25) in
-  let p = List.sort_uniq compare p in
+  let p = sort_uniq compare p in
   let () = assert (List.length p = 25) in
   ()
 

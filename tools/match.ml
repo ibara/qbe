@@ -90,7 +90,7 @@ let rec binops side {point; _} =
     [] point
 
 let group_by_fst l =
-  List.sort (fun (a, _) (b, _) ->
+  List.fast_sort (fun (a, _) (b, _) ->
     compare a b) l |>
   List.fold_left (fun (oo, l, res) (o', c) ->
       match oo with
@@ -102,8 +102,22 @@ let group_by_fst l =
     | (None, _, _) -> []
     | (Some o, l, res) -> (o, l) :: res)
 
+let sort_uniq cmp l =
+  List.fast_sort cmp l |>
+  List.fold_left (fun (eo, l) e' ->
+      match eo with
+      | None -> (Some e', l)
+      | Some e ->
+        if cmp e e' = 0
+        then (eo, l)
+        else (Some e', e :: l)
+    ) (None, []) |>
+  (function
+    | (None, _) -> []
+    | (Some e, l) -> List.rev (e :: l))
+
 let normalize (point: cursor list) =
-  List.sort_uniq compare point
+  sort_uniq compare point
 
 let nextbnr any s1 s2 =
   let pm w (_, p) = pattern_match p w in
