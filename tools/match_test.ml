@@ -5,22 +5,24 @@ let test_pattern_match =
   and nm = fun x y -> not (pattern_match x y)
   and o = (Kw, Oadd) in
   begin
-    assert (pm (Atm Any) (Atm (Con 42L)));
-    assert (pm (Atm Any) (Unr (o, Atm Any)));
-    assert (nm (Atm (Con 42L)) (Atm Any));
-    assert (pm (Unr (o, Atm Any))
+    assert (nm (Atm Tmp) (Atm (Con 42L)));
+    assert (pm (Atm AnyCon) (Atm (Con 42L)));
+    assert (nm (Atm (Con 42L)) (Atm AnyCon));
+    assert (pm (Atm Tmp) (Unr (o, Atm Tmp)));
+    assert (nm (Atm (Con 42L)) (Atm Tmp));
+    assert (pm (Unr (o, Atm AnyCon))
                (Unr (o, Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Any))
+    assert (nm (Unr (o, Atm Tmp))
                (Unr ((Kl, Oadd), Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Any))
-               (Bnr (o, Atm (Con 42L), Atm Any)));
+    assert (nm (Unr (o, Atm Tmp))
+               (Bnr (o, Atm (Con 42L), Atm Tmp)));
   end
 
 let test_peel =
   let o = Kw, Oadd in
-  let p = Bnr (o, Bnr (o, Atm Any, Atm Any),
+  let p = Bnr (o, Bnr (o, Atm Tmp, Atm Tmp),
                   Atm (Con 42L)) in
-  let l = peel p in
+  let l = peel p () in
   let () = assert (List.length l = 3) in
   let atomic_p (p, _) =
     match p with Atm _ -> true | _ -> false in
@@ -40,15 +42,15 @@ let test_fold_pairs =
 (* test pattern & state *)
 let tp =
   let o = Kw, Oadd in
-  Bnr (o, Bnr (o, Atm Any, Atm Any),
+  Bnr (o, Bnr (o, Atm Tmp, Atm Tmp),
                   Atm (Con 0L))
 let ts =
   { id = 0
-  ; seen = Atm Any
+  ; seen = Atm Tmp
   ; point =
     List.map snd
-      (List.filter (fun (p, _) -> p = Atm Any)
-        (peel tp))
+      (List.filter (fun (p, _) -> p = Atm Tmp)
+        (peel tp ()))
   }
 
 let print_sm =
@@ -78,22 +80,27 @@ let print_sm =
           sl.id sr.id s'.id
   )
 
-let address_patterns =
+let address_rules =
   let oa = Kl, Oadd in
   let om = Kl, Omul in
+  let rule name pattern = { name; pattern; } in
   (* o + b *)
-  [ Bnr (oa, Atm Any, Atm (Con 0L))
-  ; Bnr (oa, Atm (Con 0L), Atm Any)
+  [ rule "ob1" (Bnr (oa, Atm Tmp, Atm AnyCon))
+  ; rule "ob2" (Bnr (oa, Atm AnyCon, Atm Tmp))
 
   (* b + s * i *)
-  ; Bnr (oa, Atm Any, Bnr (om, Atm (Con 0L), Atm Any))
-  ; Bnr (oa, Atm Any, Bnr (om, Atm Any, Atm (Con 0L)))
-  ; Bnr (oa, Bnr (om, Atm (Con 0L), Atm Any), Atm Any)
-  ; Bnr (oa, Bnr (om, Atm Any, Atm (Con 0L)), Atm Any)
+  ; rule "bs1" (Bnr (oa, Atm Tmp, Bnr (om, Atm AnyCon, Atm Tmp)))
+  ; rule "bs2" (Bnr (oa, Atm Tmp, Bnr (om, Atm Tmp, Atm AnyCon)))
+  ; rule "bs3" (Bnr (oa, Bnr (om, Atm AnyCon, Atm Tmp), Atm Tmp))
+  ; rule "bs4" (Bnr (oa, Bnr (om, Atm Tmp, Atm AnyCon), Atm Tmp))
 
   (* o + s * i *)
-  ; Bnr (oa, Atm (Con 0L), Bnr (om, Atm (Con 0L), Atm Any))
-  ; Bnr (oa, Atm (Con 0L), Bnr (om, Atm Any, Atm (Con 0L)))
-  ; Bnr (oa, Bnr (om, Atm (Con 0L), Atm Any), Atm (Con 0L))
-  ; Bnr (oa, Bnr (om, Atm Any, Atm (Con 0L)), Atm (Con 0L))
+  ; rule "os1" (Bnr (oa, Atm AnyCon, Bnr (om, Atm AnyCon, Atm Tmp)))
+  ; rule "os2" (Bnr (oa, Atm AnyCon, Bnr (om, Atm Tmp, Atm AnyCon)))
+  ; rule "os3" (Bnr (oa, Bnr (om, Atm AnyCon, Atm Tmp), Atm AnyCon))
+  ; rule "os4" (Bnr (oa, Bnr (om, Atm Tmp, Atm AnyCon), Atm AnyCon))
   ]
+
+let sl, sm = generate_table address_rules
+let s n = List.find (fun {id; _} -> id = n) sl
+let () = print_sm sm

@@ -6,7 +6,8 @@ type op_base =
 type op = cls * op_base
 
 type atomic_pattern =
-  | Any
+  | Tmp
+  | AnyCon
   | Con of int64
 
 type pattern =
@@ -16,8 +17,14 @@ type pattern =
 
 let rec pattern_match p w =
   match p with
-  | Atm (Any) -> true
+  | Atm (Tmp) ->
+      begin match w with
+      | Atm (Con _ | AnyCon) -> false
+      | _ -> true
+      end
   | Atm (Con _) -> w = p
+  | Atm (AnyCon) ->
+      not (pattern_match (Atm Tmp) w)
   | Unr (o, pa) ->
       begin match w with
       | Unr (o', wa) ->
@@ -34,20 +41,20 @@ let rec pattern_match p w =
       | _ -> false
       end
 
-type cursor = (* a position inside a pattern *)
-  | Bnrl of op * cursor * pattern
-  | Bnrr of op * pattern * cursor
-  | Unra of op * cursor
-  | Top
+type 'a cursor = (* a position inside a pattern *)
+  | Bnrl of op * 'a cursor * pattern
+  | Bnrr of op * pattern * 'a cursor
+  | Unra of op * 'a cursor
+  | Top of 'a
 
 let rec fold_cursor c p =
   match c with
   | Bnrl (o, c', p') -> fold_cursor c' (Bnr (o, p, p'))
   | Bnrr (o, p', c') -> fold_cursor c' (Bnr (o, p', p))
   | Unra (o, c') -> fold_cursor c' (Unr (o, p))
-  | Top -> p
+  | Top _ -> p
 
-let peel p =
+let peel p x =
   let once out (p, c) =
     match p with
     | Atm _ -> (p, c) :: out
@@ -62,7 +69,7 @@ let peel p =
     if List.length l' = List.length l
     then l
     else go l'
-  in go [(p, Top)]
+  in go [(p, Top x)]
 
 let fold_pairs l1 l2 ini f =
   let rec go acc = function
@@ -76,10 +83,10 @@ let fold_pairs l1 l2 ini f =
 let iter_pairs l f =
   fold_pairs l l () (fun x () -> f x)
 
-type state =
+type 'a state =
   { id: int
   ; seen: pattern
-  ; point: cursor list }
+  ; point: ('a cursor) list }
 
 let rec binops side {point; _} =
   List.fold_left (fun res c ->
@@ -116,10 +123,10 @@ let sort_uniq cmp l =
     | (None, _) -> []
     | (Some e, l) -> List.rev (e :: l))
 
-let normalize (point: cursor list) =
+let normalize (point: ('a cursor) list) =
   sort_uniq compare point
 
-let nextbnr any s1 s2 =
+let nextbnr tmp s1 s2 =
   let pm w (_, p) = pattern_match p w in
   let o1 = binops `L s1 |>
            List.filter (pm s2.seen) |>
@@ -132,10 +139,10 @@ let nextbnr any s1 s2 =
     o,
     { id = 0
     ; seen = Bnr (o, s1.seen, s2.seen)
-    ; point = normalize (l @ any)
+    ; point = normalize (l @ tmp)
     }) (group_by_fst (o1 @ o2))
 
-let nextunr any s =
+let nextunr tmp s =
   List.fold_left (fun res -> function
       | Unra (o, c) -> (o, c) :: res
       | _ -> res)
@@ -145,19 +152,21 @@ let nextunr any s =
     o,
     { id = 0
     ; seen = Unr (o, s.seen)
-    ; point = normalize (l @ any)
+    ; point = normalize (l @ tmp)
     })
+
+type p = string
 
 module StateSet : sig
   type set
   val create: unit -> set
-  val add: set -> state ->
-           [> `Added | `Found ] * state
-  val iter: set -> (state -> unit) -> unit
-  val elems: set -> state list
+  val add: set -> p state ->
+           [> `Added | `Found ] * p state
+  val iter: set -> (p state -> unit) -> unit
+  val elems: set -> (p state) list
 end = struct
   include Hashtbl.Make(struct
-    type t = state
+    type t = p state
     let equal s1 s2 = s1.point = s2.point
     let hash s = Hashtbl.hash s.point
   end)
@@ -188,8 +197,8 @@ end = struct
 end
 
 type table_key =
-  | KU of op * state
-  | KB of op * state * state
+  | KU of op * p state
+  | KB of op * p state * p state
 
 module StateMap = Map.Make(struct
   type t = table_key
@@ -204,22 +213,33 @@ module StateMap = Map.Make(struct
               (o', sl'.id, sr'.id)
 end)
 
-let generate_table pl =
+type rule =
+  { name: string
+  ; pattern: pattern
+  (* TODO access pattern *)
+  }
+
+let generate_table rl =
   let states = StateSet.create () in
   (* initialize states *)
   let ground =
     List.fold_left
-      (fun ini p -> peel p @ ini)
-      [] pl |>
+      (fun ini r ->
+        peel r.pattern r.name @ ini)
+      [] rl |>
     group_by_fst
   in
-  let any =
-    try List.assoc (Atm Any) ground
-    with Not_found -> []
-  in
+  let find x d l =
+    try List.assoc x l with Not_found -> d in
+  let tmp = find (Atm Tmp) [] ground in
+  let con = find (Atm AnyCon) [] ground in
   let () =
     List.iter (fun (seen, l) ->
-      let point = normalize (any @ l) in
+      let point =
+        if pattern_match (Atm Tmp) seen
+        then normalize (tmp @ l)
+        else normalize (con @ l)
+      in
       let s = {id = 0; seen; point} in
       let flag, _ = StateSet.add states s in
       assert (flag = `Added)
@@ -240,7 +260,7 @@ let generate_table pl =
     flag := `Stop;
     let statel = StateSet.elems states in
     iter_pairs statel (fun (sl, sr) ->
-      nextbnr any sl sr |>
+      nextbnr tmp sl sr |>
       List.iter (fun (o, s') ->
         let flag', s' =
           StateSet.add states s' in
@@ -249,7 +269,7 @@ let generate_table pl =
     ));
     statel |>
     List.iter (fun s ->
-      nextunr any s |>
+      nextunr tmp s |>
       List.iter (fun (o, s') ->
         let flag', s' =
           StateSet.add states s' in
