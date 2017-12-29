@@ -5,6 +5,14 @@ type op_base =
   | Omul
 type op = cls * op_base
 
+let commutative = function
+  | (_, (Oadd | Omul)) -> true
+  | (_, _) -> false
+
+let associative = function
+  | (_, (Oadd | Omul)) -> true
+  | (_, _) -> false
+
 type atomic_pattern =
   | Tmp
   | AnyCon
@@ -278,3 +286,59 @@ let generate_table rl =
     ));
   done;
   (StateSet.elems states, !map)
+
+let intersperse x l =
+  let rec go left right out =
+    let l' =
+      (List.rev left @ [x] @ right) in
+    match right with
+    | x :: right' ->
+      go (x :: left) right' (l' :: out)
+    | [] -> out
+  in go [] l []
+
+let rec permute = function
+  | [] -> [[]]
+  | x :: l ->
+    List.concat (List.map
+      (intersperse x) (permute l))
+
+(* build all binary trees with ordered
+ * leaves l *)
+let rec bins build l =
+  let rec go l r out =
+    match r with
+    | [] -> out
+    | x :: r' ->
+      go (l @ [x]) r'
+        (fold_pairs
+          (bins build l)
+          (bins build r)
+          out (fun (l, r) out ->
+                 build l r :: out))
+  in
+  match l with
+  | [] -> []
+  | [x] -> [x]
+  | x :: l -> go [x] l []
+
+  (*
+let ac_equiv p =
+  let rec alevel o p = function
+    | Bnr (o', l, r) when o' = o ->
+      alevel o l @ alevel o r
+    | x -> [x]
+  in
+  let rec go out = function
+    | Bnr (o, _, _) as p
+    when associative o ->
+      let al = alevel o p in
+      (* map ac equiv for elements in al. *)
+      (* then for all choices of ac equiv, do the following. *)
+      List.map
+        (bins (fun l r -> Bnr (o, l, r)))
+        (if commutative o
+          then permute al
+          else [al]) |>
+      List.concat
+      *)
