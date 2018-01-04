@@ -82,9 +82,9 @@ let peel p x =
 let fold_pairs l1 l2 ini f =
   let rec go acc = function
     | [] -> acc
-    | a :: l1' -> 
+    | a :: l1' ->
         go (List.fold_left
-          (fun acc b -> f (a, b) acc) 
+          (fun acc b -> f (a, b) acc)
           acc l2) l1'
   in go ini l1
 
@@ -289,11 +289,12 @@ let generate_table rl =
 
 let intersperse x l =
   let rec go left right out =
-    let l' =
-      (List.rev left @ [x] @ right) in
+    let out =
+      (List.rev left @ [x] @ right) ::
+      out in
     match right with
     | x :: right' ->
-      go (x :: left) right' (l' :: out)
+      go (x :: left) right' out
     | [] -> out
   in go [] l []
 
@@ -322,23 +323,54 @@ let rec bins build l =
   | [x] -> [x]
   | x :: l -> go [x] l []
 
-  (*
-let ac_equiv p =
-  let rec alevel o p = function
+let products l ini f =
+  let rec go acc la = function
+    | [] -> f (List.rev la) acc
+    | xs :: l ->
+      List.fold_left (fun acc x ->
+          go acc (x :: la) l)
+        acc xs
+  in go ini [] l
+
+  let rec alevel o = function
     | Bnr (o', l, r) when o' = o ->
       alevel o l @ alevel o r
     | x -> [x]
-  in
-  let rec go out = function
-    | Bnr (o, _, _) as p
-    when associative o ->
-      let al = alevel o p in
-      (* map ac equiv for elements in al. *)
-      (* then for all choices of ac equiv, do the following. *)
-      List.map
-        (bins (fun l r -> Bnr (o, l, r)))
-        (if commutative o
-          then permute al
-          else [al]) |>
-      List.concat
-      *)
+
+(* combinatorial nuke... *)
+let rec ac_equiv =
+  function
+  | Bnr (o, _, _) as p
+  when associative o ->
+    products
+      (List.map ac_equiv (alevel o p)) []
+      (fun choice out ->
+        List.map
+          (bins (fun l r -> Bnr (o, l, r)))
+          (if commutative o
+            then permute choice
+            else [choice]) |>
+        List.concat |>
+        (fun l -> List.rev_append l out))
+  | Bnr (o, l, r)
+  when commutative o ->
+    products
+      (List.map ac_equiv [l; r]) []
+      (fun choice out ->
+        match choice with
+        | [l; r] ->
+          Bnr (o, l, r) ::
+          Bnr (o, r, l) :: out
+        | _ -> assert false)
+  | Bnr (o, l, r) ->
+    products
+      (List.map ac_equiv [l; r]) []
+      (fun choice out ->
+        match choice with
+        | [l; r] ->
+          Bnr (o, l, r) :: out
+        | _ -> assert false)
+  | Unr (o, c) ->
+    List.map (fun c -> Unr (o, c))
+      (ac_equiv c)
+  | x -> [x]

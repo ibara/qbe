@@ -101,6 +101,15 @@ let address_rules =
   ; rule "os4" (Bnr (oa, Bnr (om, Atm Tmp, Atm AnyCon), Atm AnyCon))
   ]
 
+(*
 let sl, sm = generate_table address_rules
 let s n = List.find (fun {id; _} -> id = n) sl
 let () = print_sm sm
+*)
+
+let tp0 =
+  let o = Kw, Oadd in
+  Bnr (o, Atm Tmp, Atm (Con 0L))
+let tp1 =
+  let o = Kw, Oadd in
+  Bnr (o, tp0, Atm (Con 1L))
