@@ -332,14 +332,13 @@ let products l ini f =
         acc xs
   in go ini [] l
 
+(* combinatorial nuke... *)
+let rec ac_equiv =
   let rec alevel o = function
     | Bnr (o', l, r) when o' = o ->
       alevel o l @ alevel o r
     | x -> [x]
-
-(* combinatorial nuke... *)
-let rec ac_equiv =
-  function
+  in function
   | Bnr (o, _, _) as p
   when associative o ->
     products
