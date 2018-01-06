@@ -70,33 +70,30 @@ let print_sm =
 let address_rules =
   let oa = Kl, Oadd in
   let om = Kl, Omul in
-  let rule name pattern = { name; pattern; } in
-  (* o + b *)
-  [ rule "ob1" (Bnr (oa, Atm Tmp, Atm AnyCon))
-  ; rule "ob2" (Bnr (oa, Atm AnyCon, Atm Tmp))
+  let rule name pattern =
+    List.mapi (fun i pattern ->
+        { name = Printf.sprintf "%s%d" name (i+1)
+        ; pattern; })
+      (ac_equiv pattern) in
 
-  (* b + s * i *)
-  ; rule "bs1" (Bnr (oa, Atm Tmp, Bnr (om, Atm AnyCon, Atm Tmp)))
-  ; rule "bs2" (Bnr (oa, Atm Tmp, Bnr (om, Atm Tmp, Atm AnyCon)))
-  ; rule "bs3" (Bnr (oa, Bnr (om, Atm AnyCon, Atm Tmp), Atm Tmp))
-  ; rule "bs4" (Bnr (oa, Bnr (om, Atm Tmp, Atm AnyCon), Atm Tmp))
+    (* o + b *)
+  rule "ob" (Bnr (oa, Atm Tmp, Atm AnyCon))
+  @ (* b + s * i *)
+  rule "bs" (Bnr (oa, Atm Tmp, Bnr (om, Atm AnyCon, Atm Tmp)))
+  @ (* o + s * i *)
+  rule "os" (Bnr (oa, Atm AnyCon, Bnr (om, Atm AnyCon, Atm Tmp)))
+  @ (* b + o + s * i *)
+  rule "bos" (Bnr (oa, Bnr (oa, Atm AnyCon, Atm Tmp), Bnr (om, Atm AnyCon, Atm Tmp)))
 
-  (* o + s * i *)
-  ; rule "os1" (Bnr (oa, Atm AnyCon, Bnr (om, Atm AnyCon, Atm Tmp)))
-  ; rule "os2" (Bnr (oa, Atm AnyCon, Bnr (om, Atm Tmp, Atm AnyCon)))
-  ; rule "os3" (Bnr (oa, Bnr (om, Atm AnyCon, Atm Tmp), Atm AnyCon))
-  ; rule "os4" (Bnr (oa, Bnr (om, Atm Tmp, Atm AnyCon), Atm AnyCon))
-  ]
-
-(*
 let sl, sm = generate_table address_rules
 let s n = List.find (fun {id; _} -> id = n) sl
 let () = print_sm sm
-*)
 
+(*
 let tp0 =
   let o = Kw, Oadd in
   Bnr (o, Atm Tmp, Atm (Con 0L))
 let tp1 =
   let o = Kw, Oadd in
   Bnr (o, tp0, Atm (Con 1L))
+*)
