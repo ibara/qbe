@@ -20,11 +20,13 @@ type atomic_pattern =
 
 type pattern =
   | Bnr of op * pattern * pattern
-  | Unr of op * pattern
   | Atm of atomic_pattern
+  | Var of string * atomic_pattern
 
 let rec pattern_match p w =
   match p with
+  | Var _ ->
+    failwith "variable not allowed"
   | Atm (Tmp) ->
       begin match w with
       | Atm (Con _ | AnyCon) -> false
@@ -33,13 +35,6 @@ let rec pattern_match p w =
   | Atm (Con _) -> w = p
   | Atm (AnyCon) ->
       not (pattern_match (Atm Tmp) w)
-  | Unr (o, pa) ->
-      begin match w with
-      | Unr (o', wa) ->
-          o' = o &&
-          pattern_match pa wa
-      | _ -> false
-      end
   | Bnr (o, pl, pr) ->
       begin match w with
       | Bnr (o', wl, wr) ->
@@ -52,22 +47,19 @@ let rec pattern_match p w =
 type 'a cursor = (* a position inside a pattern *)
   | Bnrl of op * 'a cursor * pattern
   | Bnrr of op * pattern * 'a cursor
-  | Unra of op * 'a cursor
   | Top of 'a
 
 let rec fold_cursor c p =
   match c with
   | Bnrl (o, c', p') -> fold_cursor c' (Bnr (o, p, p'))
   | Bnrr (o, p', c') -> fold_cursor c' (Bnr (o, p', p))
-  | Unra (o, c') -> fold_cursor c' (Unr (o, p))
   | Top _ -> p
 
 let peel p x =
   let once out (p, c) =
     match p with
+    | Var _ -> failwith "variable not allowed"
     | Atm _ -> (p, c) :: out
-    | Unr (o, pa) ->
-        (pa, Unra (o, c)) :: out
     | Bnr (o, pl, pr) ->
         (pl, Bnrl (o, c, pr)) ::
         (pr, Bnrr (o, pl, c)) :: out
@@ -150,19 +142,6 @@ let nextbnr tmp s1 s2 =
     ; point = normalize (l @ tmp)
     }) (group_by_fst (o1 @ o2))
 
-let nextunr tmp s =
-  List.fold_left (fun res -> function
-      | Unra (o, c) -> (o, c) :: res
-      | _ -> res)
-    [] s.point |>
-  group_by_fst |>
-  List.map (fun (o, l) ->
-    o,
-    { id = 0
-    ; seen = Unr (o, s.seen)
-    ; point = normalize (l @ tmp)
-    })
-
 type p = string
 
 module StateSet : sig
@@ -205,18 +184,13 @@ end = struct
 end
 
 type table_key =
-  | KU of op * p state
-  | KB of op * p state * p state
+  | K of op * p state * p state
 
 module StateMap = Map.Make(struct
   type t = table_key
   let compare ka kb =
     match ka, kb with
-    | KU (_), KB (_) -> -1
-    | KB (_), KU (_) -> +1
-    | KU (o, s), KU (o', s') ->
-      compare (o, s.id) (o', s'.id)
-    | KB (o, sl, sr), KB (o', sl', sr') ->
+    | K (o, sl, sr), K (o', sl', sr') ->
       compare (o, sl.id, sr.id)
               (o', sl'.id, sr'.id)
 end)
@@ -273,16 +247,7 @@ let generate_table rl =
         let flag', s' =
           StateSet.add states s' in
         flagmerge flag';
-        map_add (KB (o, sl, sr)) s';
-    ));
-    statel |>
-    List.iter (fun s ->
-      nextunr tmp s |>
-      List.iter (fun (o, s') ->
-        let flag', s' =
-          StateSet.add states s' in
-        flagmerge flag';
-        map_add (KU (o, s)) s';
+        map_add (K (o, sl, sr)) s';
     ));
   done;
   (StateSet.elems states, !map)
@@ -353,23 +318,14 @@ let rec ac_equiv =
         (fun l -> List.rev_append l out))
   | Bnr (o, l, r)
   when commutative o ->
-    products
-      (List.map ac_equiv [l; r]) []
-      (fun choice out ->
-        match choice with
-        | [l; r] ->
-          Bnr (o, l, r) ::
-          Bnr (o, r, l) :: out
-        | _ -> assert false)
+    fold_pairs
+      (ac_equiv l) (ac_equiv r) []
+      (fun (l, r) out ->
+        Bnr (o, l, r) ::
+        Bnr (o, r, l) :: out)
   | Bnr (o, l, r) ->
-    products
-      (List.map ac_equiv [l; r]) []
-      (fun choice out ->
-        match choice with
-        | [l; r] ->
-          Bnr (o, l, r) :: out
-        | _ -> assert false)
-  | Unr (o, c) ->
-    List.map (fun c -> Unr (o, c))
-      (ac_equiv c)
+    fold_pairs
+      (ac_equiv l) (ac_equiv r) []
+      (fun (l, r) out ->
+        Bnr (o, l, r) :: out)
   | x -> [x]

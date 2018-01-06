@@ -2,20 +2,12 @@
 
 let test_pattern_match =
   let pm = pattern_match
-  and nm = fun x y -> not (pattern_match x y)
-  and o = (Kw, Oadd) in
+  and nm = fun x y -> not (pattern_match x y) in
   begin
     assert (nm (Atm Tmp) (Atm (Con 42L)));
     assert (pm (Atm AnyCon) (Atm (Con 42L)));
     assert (nm (Atm (Con 42L)) (Atm AnyCon));
-    assert (pm (Atm Tmp) (Unr (o, Atm Tmp)));
     assert (nm (Atm (Con 42L)) (Atm Tmp));
-    assert (pm (Unr (o, Atm AnyCon))
-               (Unr (o, Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Tmp))
-               (Unr ((Kl, Oadd), Atm (Con 42L))));
-    assert (nm (Unr (o, Atm Tmp))
-               (Bnr (o, Atm (Con 42L), Atm Tmp)));
   end
 
 let test_peel =
@@ -68,12 +60,7 @@ let print_sm =
   in
   StateMap.iter (fun k s' ->
     match k with
-    | KU (o, s) ->
-        Printf.printf
-          "(%s %d) -> %d\n"
-          (op_str o)
-          s.id s'.id
-    | KB (o, sl, sr) ->
+    | K (o, sl, sr) ->
         Printf.printf
           "(%s %d %d) -> %d\n"
           (op_str o)
