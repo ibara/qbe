@@ -276,7 +276,7 @@ renblk(Blk *b, Name **stk, Fn *fn)
 	if (rtype(b->jmp.arg) == RTmp)
 	if (fn->tmp[t].visit)
 		b->jmp.arg = getstk(t, b, stk);
-	for (ps=b->s; (s=*ps); ps++)
+	for (ps=b->s; (s=*ps); ps++) /* !!! NOT OK !!! */
 		for (p=s->phi; p; p=p->link) {
 			t = p->to.val;
 			if ((t=fn->tmp[t].visit)) {
