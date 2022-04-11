@@ -141,6 +141,8 @@ gasemitfin(FILE *f)
 	int sz, i;
 	double d;
 
+	if (gasasm == Gaself)
+		fprintf(f, ".section .note.GNU-stack,\"\",@progbits\n\n");
 	if (!stash)
 		return;
 	fprintf(f, "/* floating point constants */\n.data\n");
