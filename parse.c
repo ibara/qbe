@@ -1092,6 +1092,7 @@ void
 parse(FILE *f, char *path, void data(Dat *), void func(Fn *))
 {
 	Lnk lnk;
+	uint n;
 
 	lexinit();
 	inf = f;
@@ -1115,6 +1116,9 @@ parse(FILE *f, char *path, void data(Dat *), void func(Fn *))
 			parsetyp();
 			break;
 		case Teof:
+			for (n=0; n<ntyp; n++)
+				if (typ[n].nunion)
+					vfree(typ[n].fields);
 			vfree(typ);
 			return;
 		}
