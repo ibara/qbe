@@ -285,7 +285,7 @@ loadcon(Con *c, int r, int k, FILE *f)
 static void emitins(Ins *, E *);
 
 static void
-fixarg(Ref *pr, E *e)
+fixarg(Ref *pr, int sz, E *e)
 {
 	Ins *i;
 	Ref r;
@@ -294,7 +294,7 @@ fixarg(Ref *pr, E *e)
 	r = *pr;
 	if (rtype(r) == RSlot) {
 		s = slot(r.val, e);
-		if (s > 32760) {
+		if (s > sz * 4095u) {
 			i = &(Ins){Oaddr, Kl, TMP(IP0), {r}};
 			emitins(i, e);
 			*pr = TMP(IP0);
@@ -313,9 +313,9 @@ emitins(Ins *i, E *e)
 	switch (i->op) {
 	default:
 		if (isload(i->op))
-			fixarg(&i->arg[0], e);
+			fixarg(&i->arg[0], loadsz(i), e);
 		if (isstore(i->op))
-			fixarg(&i->arg[1], e);
+			fixarg(&i->arg[1], storesz(i), e);
 	Table:
 		/* most instructions are just pulled out of
 		 * the table omap[], some special cases are
