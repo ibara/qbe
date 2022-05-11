@@ -11,6 +11,7 @@
       * <@ Input Files >
       * <@ BNF Notation >
       * <@ Sigils >
+      * <@ Spaces >
   2. <@ Types >
       * <@ Simple Types >
       * <@ Subtyping >
@@ -104,6 +105,16 @@ scope and nature of identifiers.
 
 In this BNF syntax, we use `?IDENT` to designate an identifier
 starting with the sigil `?`.
+
+~ Spaces
+~~~~~~~~
+
+Individual tokens in IL files must be separated by one or
+more spacing characters.  Both spaces and tabs are recognized
+as spacing characters.  In data and type definitions, newlines
+can also be used as spaces to prevent overly long lines.  When
+exactly one of two consecutive tokens is a symbol (for example
+`,` or `=` or `{`), space may be omitted.
 
 - 2. Types
 ----------
@@ -202,9 +213,9 @@ constants by the linker.
 
     `bnf
     LINKAGE :=
-        'export'
-      | 'section' SECNAME
-      | 'section' SECNAME SECFLAGS
+        'export' '\n'*
+      | 'section' SECNAME '\n'*
+      | 'section' SECNAME SECFLAGS '\n'*
 
     SECNAME  := '"' .... '"'
     SECFLAGS := '"' .... '"'
@@ -296,7 +307,8 @@ their size between curly braces.
 
     `bnf
     DATADEF :=
-        LINKAGE* 'data' $IDENT '=' ['align' NUMBER]
+        LINKAGE*
+	'data' $IDENT '=' ['align' NUMBER]
         '{'
             ( EXTTY DATAITEM+
             | 'z'   NUMBER ),
@@ -354,8 +366,9 @@ Here are various examples of data definitions.
 
     `bnf
     FUNCDEF :=
-        LINKAGE* 'function' [ABITY] $IDENT '(' (PARAM), ')'
-        '{'
+        LINKAGE*
+	'function' [ABITY] $IDENT '(' (PARAM), ')' '\n'*
+        '{' '\n'+
            BLOCK+
         '}'
 
@@ -440,25 +453,28 @@ connected using jump instructions.
 
     `bnf
     BLOCK :=
-        @IDENT    # Block label
-        PHI*      # Phi instructions
-        INST*     # Regular instructions
-        JUMP      # Jump or return
+        @IDENT '\n'+    # Block label
+        PHILINE*        # Phi instructions
+        INSTLINE*       # Regular instructions
+        JUMP '\n'+      # Jump or return
+
+    PHILINE  := PHI '\n'+
+    INSTLINE := INST '\n'+
 
 All blocks have a name that is specified by a label at
 their beginning.  Then follows a sequence of instructions
 that have "fall-through" flow.  Finally one jump terminates
 the block.  The jump can either transfer control to another
-block of the same function or return; they are described
+block of the same function or return; jumps are described
 further below.
 
 The first block in a function must not be the target of
-any jump in the program.  If this is really needed,
-the frontend could insert an empty prelude block
+any jump in the program.  If a jump to the function start
+is needed, the frontend must insert an empty prelude block
 at the beginning of the function.
 
 When one block jumps to the next block in the IL file,
-it is not necessary to give the jump instruction, it
+it is not necessary to write the jump instruction, it
 will be automatically added by the parser.  For example
 the start block in the example below jumps directly
 to the loop block.
