@@ -19,14 +19,14 @@ static Use **usewrk;
 static uint nuse;
 
 static int
-czero(Con *c, int w)
+iscon(Con *c, int w, uint64_t k)
 {
 	if (c->type != CBits)
 		return 0;
 	if (w)
-		return c->bits.i == 0;
+		return (uint64_t)c->bits.i == k;
 	else
-		return (uint32_t)c->bits.i == 0;
+		return (uint32_t)c->bits.i == (uint32_t)k;
 }
 
 static int
@@ -132,7 +132,7 @@ visitjmp(Blk *b, int n, Fn *fn)
 			edge[n][0].work = &edge[n][1];
 			flowrk = &edge[n][0];
 		}
-		else if (czero(&fn->con[l], 0)) {
+		else if (iscon(&fn->con[l], 0, 0)) {
 			assert(edge[n][0].dead);
 			edge[n][1].work = flowrk;
 			flowrk = &edge[n][1];
@@ -297,7 +297,7 @@ fold(Fn *fn)
 					renref(&i->arg[n]);
 		renref(&b->jmp.arg);
 		if (b->jmp.type == Jjnz && rtype(b->jmp.arg) == RCon) {
-				if (czero(&fn->con[b->jmp.arg.val], 0)) {
+				if (iscon(&fn->con[b->jmp.arg.val], 0, 0)) {
 					edgedel(b, &b->s1);
 					b->s1 = b->s2;
 					b->s2 = 0;
@@ -365,6 +365,16 @@ foldint(Con *res, int op, int w, Con *cl, Con *cr)
 	}
 	else if (cl->type == CAddr || cr->type == CAddr)
 		return 1;
+	if (op == Odiv || op == Orem || op == Oudiv || op == Ourem) {
+		if (iscon(cr, w, 0))
+			return 1;
+		if (op == Odiv || op == Orem) {
+			x = w ? INT64_MIN : INT32_MIN;
+			if (iscon(cr, w, -1))
+			if (iscon(cl, w, x))
+				return 1;
+		}
+	}
 	switch (op) {
 	case Oadd:  x = l.u + r.u; break;
 	case Osub:  x = l.u - r.u; break;
@@ -508,9 +518,6 @@ opfold(int op, int cls, Con *cl, Con *cr, Fn *fn)
 	Ref r;
 	Con c;
 
-	if ((op == Odiv || op == Oudiv
-	|| op == Orem || op == Ourem) && czero(cr, KWIDE(cls)))
-		return Bot;
 	if (cls == Kw || cls == Kl) {
 		if (foldint(&c, op, cls == Kl, cl, cr))
 			return Bot;
