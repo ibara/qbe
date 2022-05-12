@@ -2,6 +2,7 @@ BIN = qbe
 
 V = @
 OBJDIR = obj
+PREFIX ?= /usr/local
 
 SRC      = main.c util.c parse.c cfg.c mem.c ssa.c alias.c load.c copy.c \
            fold.c live.c spill.c rega.c gas.c
