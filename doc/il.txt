@@ -372,8 +372,8 @@ Here are various examples of data definitions.
     FUNCDEF :=
         LINKAGE*
 	'function' [ABITY] $IDENT '(' (PARAM), ')' [NL]
-        '{'
-           [NL] BLOCK+
+        '{' NL
+            BLOCK+
         '}'
 
     PARAM :=
