@@ -11,7 +11,7 @@
       * <@ Input Files >
       * <@ BNF Notation >
       * <@ Sigils >
-      * <@ Spaces >
+      * <@ Spacing >
   2. <@ Types >
       * <@ Simple Types >
       * <@ Subtyping >
@@ -83,8 +83,9 @@ below using BNF syntax.  The different BNF constructs used
 are listed below.
 
   * Keywords are enclosed between quotes;
-  * `... | ...` expresses disjunctions;
-  * `[ ... ]` marks some syntax as optional;
+  * `... | ...` expresses alternatives;
+  * `( ... )` groups syntax;
+  * `[ ... ]` marks the nested syntax as optional;
   * `( ... ),` designates a comma-separated list of the
     enclosed syntax;
   * `...*` and `...+` are used for arbitrary and
@@ -106,15 +107,18 @@ scope and nature of identifiers.
 In this BNF syntax, we use `?IDENT` to designate an identifier
 starting with the sigil `?`.
 
-~ Spaces
-~~~~~~~~
+~ Spacing
+~~~~~~~~~
+
+    `bnf
+    NL := '\n'+
 
 Individual tokens in IL files must be separated by one or
 more spacing characters.  Both spaces and tabs are recognized
 as spacing characters.  In data and type definitions, newlines
-can also be used as spaces to prevent overly long lines.  When
+may also be used as spaces to prevent overly long lines.  When
 exactly one of two consecutive tokens is a symbol (for example
-`,` or `=` or `{`), space may be omitted.
+`,` or `=` or `{`), spacing may be omitted.
 
 - 2. Types
 ----------
@@ -213,9 +217,9 @@ constants by the linker.
 
     `bnf
     LINKAGE :=
-        'export' '\n'*
-      | 'section' SECNAME '\n'*
-      | 'section' SECNAME SECFLAGS '\n'*
+        'export' [NL]
+      | 'section' SECNAME [NL]
+      | 'section' SECNAME SECFLAGS [NL]
 
     SECNAME  := '"' .... '"'
     SECFLAGS := '"' .... '"'
@@ -367,9 +371,9 @@ Here are various examples of data definitions.
     `bnf
     FUNCDEF :=
         LINKAGE*
-	'function' [ABITY] $IDENT '(' (PARAM), ')' '\n'*
-        '{' '\n'+
-           BLOCK+
+	'function' [ABITY] $IDENT '(' (PARAM), ')' [NL]
+        '{'
+           [NL] BLOCK+
         '}'
 
     PARAM :=
@@ -453,13 +457,10 @@ connected using jump instructions.
 
     `bnf
     BLOCK :=
-        @IDENT '\n'+    # Block label
-        PHILINE*        # Phi instructions
-        INSTLINE*       # Regular instructions
-        JUMP '\n'+      # Jump or return
-
-    PHILINE  := PHI '\n'+
-    INSTLINE := INST '\n'+
+        @IDENT NL     # Block label
+        ( PHI NL )*   # Phi instructions
+        ( INST NL )*  # Regular instructions
+        JUMP NL       # Jump or return
 
 All blocks have a name that is specified by a label at
 their beginning.  Then follows a sequence of instructions
