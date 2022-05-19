@@ -531,6 +531,7 @@ enum Asm {
 };
 extern char *gasloc;
 extern char *gassym;
+extern enum Asm gasasm;
 void gasinit(enum Asm);
 void gasemitlnk(char *, Lnk *, char *, FILE *);
 void gasemitfntail(char *, FILE *);

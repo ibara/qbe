@@ -2,7 +2,7 @@
 
 
 char *gasloc, *gassym;
-static int gasasm;
+enum Asm gasasm;
 
 void
 gasinit(enum Asm asmmode)
@@ -38,6 +38,8 @@ gasemitlnk(char *n, Lnk *l, char *s, FILE *f)
 	p = n[0] == '"' ? "" : gassym;
 	if (l->export)
 		fprintf(f, ".globl %s%s\n", p, n);
+	if (gasasm == Gasmacho)
+		fprintf(f, ".p2align 2\n");
 	fprintf(f, "%s%s:\n", p, n);
 }
 

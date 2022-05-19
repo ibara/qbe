@@ -70,7 +70,7 @@ init() {
 	"")
 		case `uname` in
 		*Darwin*)
-			cc="cc -Wl,-no_pie"
+			cc="cc"
 			;;
 		*OpenBSD*)
 			cc="cc -nopie"

@@ -254,15 +254,24 @@ loadcon(Con *c, int r, int k, FILE *f)
 	n = c->bits.i;
 	if (c->type == CAddr) {
 		rn = rname(r, Kl);
-		if (n)
-			sprintf(off, "+%"PRIi64, n);
-		else
-			off[0] = 0;
-		p = c->local ? ".L" : "";
-		fprintf(f, "\tadrp\t%s, %s%s%s\n",
-			rn, p, str(c->label), off);
-		fprintf(f, "\tadd\t%s, %s, #:lo12:%s%s%s\n",
-			rn, rn, p, str(c->label), off);
+		p = c->local ? gasloc : gassym;
+		if (gasasm == Gasmacho) {
+			fprintf(f, "\tadrp\t%s, %s%s@GOTPAGE\n",
+				rn, p, str(c->label));
+			fprintf(f, "\tldr\t%s, [%s, %s%s@GOTPAGEOFF]\n",
+				rn, rn, p, str(c->label));
+			fprintf(f, "\tadd\t%s, %s, #%"PRIi64"\n",
+				rn, rn, n);
+		} else {
+			if (n)
+				sprintf(off, "+%"PRIi64, n);
+			else
+				off[0] = 0;
+			fprintf(f, "\tadrp\t%s, %s%s%s\n",
+				rn, p, str(c->label), off);
+			fprintf(f, "\tadd\t%s, %s, #:lo12:%s%s%s\n",
+				rn, rn, p, str(c->label), off);
+		}
 		return;
 	}
 	assert(c->type == CBits);
@@ -500,7 +509,7 @@ arm64_emitfn(Fn *fn, FILE *out)
 
 	for (lbl=0, b=e->fn->start; b; b=b->link) {
 		if (lbl || b->npred > 1)
-			fprintf(e->f, ".L%d:\n", id0+b->id);
+			fprintf(e->f, "%s%d:\n", gasloc, id0+b->id);
 		for (i=b->ins; i!=&b->ins[b->nins]; i++)
 			emitins(i, e);
 		lbl = 1;
@@ -550,7 +559,7 @@ arm64_emitfn(Fn *fn, FILE *out)
 		case Jjmp:
 		Jmp:
 			if (b->s1 != b->link)
-				fprintf(e->f, "\tb\t.L%d\n", id0+b->s1->id);
+				fprintf(e->f, "\tb\t%s%d\n", gasloc, id0+b->s1->id);
 			else
 				lbl = 0;
 			break;
@@ -564,7 +573,7 @@ arm64_emitfn(Fn *fn, FILE *out)
 				b->s2 = t;
 			} else
 				c = cmpneg(c);
-			fprintf(e->f, "\tb%s\t.L%d\n", ctoa[c], id0+b->s2->id);
+			fprintf(e->f, "\tb%s\t%s%d\n", ctoa[c], gasloc, id0+b->s2->id);
 			goto Jmp;
 		}
 	}
