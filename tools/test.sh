@@ -1,8 +1,8 @@
 #!/bin/sh
 
 dir=`cd $(dirname "$0"); pwd`
-bin=$dir/../obj/qbe
-binref=$dir/../obj/qbe.ref
+bin=$dir/../qbe
+binref=$dir/../qbe.ref
 
 tmp=/tmp/qbe.zzzz
 

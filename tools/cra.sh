@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DIR=`cd $(dirname "$0"); pwd`
-QBE=$DIR/../obj/qbe
+QBE=$DIR/../qbe
 BUGF=/tmp/bug.id
 FIND=$1
 FIND=${FIND:-afl-find}

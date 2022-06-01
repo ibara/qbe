@@ -1,8 +1,8 @@
-BIN = qbe
+.POSIX:
+.SUFFIXES: .o .c
 
-V = @
-OBJDIR = obj
-PREFIX ?= /usr/local
+PREFIX = /usr/local
+BINDIR = $(PREFIX)/bin
 
 SRC      = main.c util.c parse.c cfg.c mem.c ssa.c alias.c load.c copy.c \
            fold.c live.c spill.c rega.c gas.c
@@ -11,33 +11,24 @@ ARM64SRC = arm64/targ.c arm64/abi.c arm64/isel.c arm64/emit.c
 RV64SRC  = rv64/targ.c rv64/abi.c rv64/isel.c rv64/emit.c
 SRCALL   = $(SRC) $(AMD64SRC) $(ARM64SRC) $(RV64SRC)
 
-AMD64OBJ = $(AMD64SRC:%.c=$(OBJDIR)/%.o)
-ARM64OBJ = $(ARM64SRC:%.c=$(OBJDIR)/%.o)
-RV64OBJ  = $(RV64SRC:%.c=$(OBJDIR)/%.o)
-OBJ      = $(SRC:%.c=$(OBJDIR)/%.o) $(AMD64OBJ) $(ARM64OBJ) $(RV64OBJ)
+AMD64OBJ = $(AMD64SRC:.c=.o)
+ARM64OBJ = $(ARM64SRC:.c=.o)
+RV64OBJ  = $(RV64SRC:.c=.o)
+OBJ      = $(SRC:.c=.o) $(AMD64OBJ) $(ARM64OBJ) $(RV64OBJ)
 
-CFLAGS += -Wall -Wextra -std=c99 -g -pedantic
+CFLAGS = $(CPPFLAGS) -Wall -Wextra -std=c99 -g -Wpedantic
 
-$(OBJDIR)/$(BIN): $(OBJ) $(OBJDIR)/timestamp
-	@test -z "$(V)" || echo "ld $@"
-	$(V)$(CC) $(LDFLAGS) $(OBJ) -o $@
+qbe: $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) -o $@
 
-$(OBJDIR)/%.o: %.c $(OBJDIR)/timestamp
-	@test -z "$(V)" || echo "cc $<"
-	$(V)$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR)/timestamp:
-	@mkdir -p $(OBJDIR)
-	@mkdir -p $(OBJDIR)/amd64
-	@mkdir -p $(OBJDIR)/arm64
-	@mkdir -p $(OBJDIR)/rv64
-	@touch $@
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ): all.h ops.h
 $(AMD64OBJ): amd64/all.h
 $(ARM64OBJ): arm64/all.h
 $(RV64OBJ): rv64/all.h
-$(OBJDIR)/main.o: config.h
+main.o: config.h
 
 config.h:
 	@case `uname` in                               \
@@ -61,26 +52,26 @@ config.h:
 		;;                                     \
 	esac > $@
 
-install: $(OBJDIR)/$(BIN)
-	mkdir -p "$(DESTDIR)/$(PREFIX)/bin/"
-	cp $< "$(DESTDIR)/$(PREFIX)/bin/"
+install: qbe
+	mkdir -p "$(DESTDIR)/$(BINDIR)"
+	cp qbe "$(DESTDIR)/$(BINDIR)/qbe"
 
 uninstall:
-	rm -f "$(DESTDIR)/$(PREFIX)/bin/$(BIN)"
+	rm -f "$(DESTDIR)/$(BINDIR)/qbe"
 
 clean:
-	rm -fr $(OBJDIR)
+	rm -f *.o */*.o qbe
 
 clean-gen: clean
 	rm -f config.h
 
-check: $(OBJDIR)/$(BIN)
+check: qbe
 	tools/test.sh all
 
-check-arm64: $(OBJDIR)/$(BIN)
+check-arm64: qbe
 	TARGET=arm64 tools/test.sh all
 
-check-rv64: $(OBJDIR)/$(BIN)
+check-rv64: qbe
 	TARGET=rv64 tools/test.sh all
 
 src:

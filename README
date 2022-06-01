@@ -12,9 +12,7 @@ The LICENSE file applies to all files distributed.
 
 - Compilation and Installation
 
-Invoke GNU make in this directory to create the executable
-file obj/qbe.  On some systems (BSD) you might have to use
-'gmake' instead of 'make'.  Install using 'make install',
-the standard DESTDIR and PREFIX environment variables are
-supported.  Alternatively, you may simply copy the obj/qbe
-binary manually.
+Invoke make in this directory to create the executable
+file qbe.  Install using 'make install', the standard
+DESTDIR and PREFIX environment variables are supported.
+Alternatively, you may simply copy the qbe binary manually.
