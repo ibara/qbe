@@ -11,7 +11,7 @@ int rv64_rsave[] = {
 	A0, A1, A2, A3, A4, A5, A6, A7,
 	FA0, FA1, FA2,  FA3,  FA4, FA5, FA6, FA7,
 	FT0, FT1, FT2,  FT3,  FT4, FT5, FT6, FT7,
-	FT8, FT9, FT10, FT11,
+	FT8, FT9, FT10,
 	-1
 };
 int rv64_rclob[] = {
@@ -22,8 +22,7 @@ int rv64_rclob[] = {
 	-1
 };
 
-/* T6 used as swap register (TODO: is there a better choice?) */
-#define RGLOB (BIT(FP) | BIT(SP) | BIT(GP) | BIT(TP) | BIT(RA) | BIT(T6))
+#define RGLOB (BIT(FP) | BIT(SP) | BIT(GP) | BIT(TP) | BIT(RA))
 
 static int
 rv64_memargs(int op)
@@ -39,7 +38,7 @@ Target T_rv64 = {
 	.fpr0 = FT0,
 	.nfpr = NFPR,
 	.rglob = RGLOB,
-	.nrglob = 6,
+	.nrglob = 5,
 	.rsave = rv64_rsave,
 	.nrsave = {NGPS, NFPS},
 	.retregs = rv64_retregs,

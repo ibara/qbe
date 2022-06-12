@@ -89,6 +89,7 @@ static struct {
 	{ Ocopy,   Ki, "mv %=, %0" },
 	{ Ocopy,   Ka, "fmv.%k %=, %0" },
 	{ Oswap,   Ki, "mv %?, %0\n\tmv %0, %1\n\tmv %1, %?" },
+	{ Oswap,   Ka, "fmv.%k %?, %0\n\tfmv.%k %0, %1\n\tfmv.%k %1, %?" },
 	{ Oreqz,   Ki, "seqz %=, %0" },
 	{ Ornez,   Ki, "snez %=, %0" },
 	{ Ocall,   Kw, "jalr %0" },
@@ -101,16 +102,17 @@ static char *rname[] = {
 	[GP] = "gp",
 	[TP] = "tp",
 	[RA] = "ra",
-	[T6] = "t6",
 	[T0] = "t0", "t1", "t2", "t3", "t4", "t5",
 	[A0] = "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7",
 	[S1] = "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8",
 	       "s9", "s10", "s11",
 	[FT0] = "ft0", "ft1", "ft2", "ft3", "ft4", "ft5", "ft6", "ft7",
-	        "ft8", "ft9", "ft10", "ft11",
+	        "ft8", "ft9", "ft10",
 	[FA0] = "fa0", "fa1", "fa2", "fa3", "fa4", "fa5", "fa6", "fa7",
 	[FS0] = "fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7",
 	        "fs8", "fs9", "fs10", "fs11",
+	[T6] = "t6",
+	[FT11] = "ft11",
 };
 
 static int64_t
@@ -162,7 +164,7 @@ emitf(char *s, Ins *i, Fn *fn, FILE *f)
 			if (KBASE(k) == 0)
 				fputs("t6", f);
 			else
-				abort();
+				fputs("ft11", f);
 			break;
 		case 'k':
 			if (i->cls != Kl)

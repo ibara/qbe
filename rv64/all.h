@@ -11,22 +11,25 @@ enum Rv64Reg {
 	S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11,
 
 	/* globally live */
-	FP, SP, GP, TP, RA, T6,
+	FP, SP, GP, TP, RA,
 
 	/* FP caller-save */
-	FT0, FT1, FT2, FT3, FT4, FT5, FT6, FT7, FT8, FT9, FT10, FT11,
+	FT0, FT1, FT2, FT3, FT4, FT5, FT6, FT7, FT8, FT9, FT10,
 	FA0, FA1, FA2, FA3, FA4, FA5, FA6, FA7,
 
 	/* FP callee-save */
 	FS0, FS1, FS2, FS3, FS4, FS5, FS6, FS7, FS8, FS9, FS10, FS11,
 
+	/* reserved (see rv64/emit.c) */
+	T6, FT11,
+
 	NFPR = FS11 - FT0 + 1,
-	NGPR = T6 - T0 + 1,
+	NGPR = RA - T0 + 1,
 	NGPS = A7 - T0 + 1,
 	NFPS = FA7 - FT0 + 1,
 	NCLR = (S11 - S1 + 1) + (FS11 - FS0 + 1),
 };
-MAKESURE(reg_not_tmp, FS11 < (int)Tmp0);
+MAKESURE(reg_not_tmp, FT11 < (int)Tmp0);
 
 struct Rv64Op {
 	char imm;
