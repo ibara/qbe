@@ -74,8 +74,7 @@ Again:
 			nlv[KBASE(f->tmp[t].cls)]++;
 		if (rtype(b->jmp.arg) == RCall) {
 			assert((int)bscount(b->in) == T.nrglob &&
-				nlv[0] == T.nrglob &&
-				nlv[1] == 0);
+				b->in->t[0] == T.rglob);
 			b->in->t[0] |= T.retregs(b->jmp.arg, nlv);
 		} else
 			bset(b->jmp.arg, b, nlv, f->tmp);
