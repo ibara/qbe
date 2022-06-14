@@ -536,7 +536,6 @@ anumber(ANum *ai, Blk *b, Con *con)
 	 *   0 * 2   -> 3    s * i (when constant is 1,2,4,8)
 	 */
 	static char add[10][10] = {
-		[2] [2] = 2,              /* folding */
 		[2] [4] = 4, [4] [2] = 4,
 		[2] [6] = 6, [6] [2] = 6,
 		[2] [7] = 7, [7] [2] = 7,
